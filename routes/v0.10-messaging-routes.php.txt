@@ -1,0 +1,15 @@
+// Add near your other controller imports:
+use App\Http\Controllers\CustomerMessageController;
+
+// Add inside auth + EnsureOnboardingCompleted group:
+Route::post('/messages/estimates/{estimate}/email', [CustomerMessageController::class, 'estimateEmail'])
+    ->name('messages.estimate.email');
+
+Route::post('/messages/estimates/{estimate}/sms', [CustomerMessageController::class, 'estimateSms'])
+    ->name('messages.estimate.sms');
+
+Route::post('/messages/quick-bills/{quickBill}/email', [CustomerMessageController::class, 'quickBillEmail'])
+    ->name('messages.quick-bill.email');
+
+Route::post('/messages/quick-bills/{quickBill}/sms', [CustomerMessageController::class, 'quickBillSms'])
+    ->name('messages.quick-bill.sms');

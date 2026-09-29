@@ -1,0 +1,11 @@
+// Add near controller imports:
+use App\Http\Controllers\RecurringServiceController;
+
+// Add inside auth + EnsureOnboardingCompleted group:
+Route::get('/recurring-services', [RecurringServiceController::class, 'index'])->name('recurring-services.index');
+Route::get('/recurring-services/new', [RecurringServiceController::class, 'create'])->name('recurring-services.create');
+Route::post('/recurring-services', [RecurringServiceController::class, 'store'])->name('recurring-services.store');
+Route::get('/recurring-services/{recurringService}/edit', [RecurringServiceController::class, 'edit'])->name('recurring-services.edit');
+Route::put('/recurring-services/{recurringService}', [RecurringServiceController::class, 'update'])->name('recurring-services.update');
+Route::post('/recurring-services/{recurringService}/generate', [RecurringServiceController::class, 'generate'])->name('recurring-services.generate');
+Route::post('/recurring-services/{recurringService}/toggle', [RecurringServiceController::class, 'toggle'])->name('recurring-services.toggle');

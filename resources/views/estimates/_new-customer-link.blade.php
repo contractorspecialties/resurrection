@@ -1,0 +1,1 @@
+<div class="help" style="margin-top:8px">Customer not here? <a href="{{ route('customers.create') }}" target="_blank" rel="noopener" style="text-decoration:underline;font-weight:800">+ Add a new customer</a> <span class="muted">then refresh this estimate page.</span></div>
