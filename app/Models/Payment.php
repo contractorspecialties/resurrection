@@ -15,6 +15,7 @@ class Payment extends Model
         'provider',
         'purpose',
         'status',
+        'active_checkout_key',
         'amount_cents',
         'platform_fee_cents',
         'currency',

@@ -6,6 +6,7 @@ use App\Models\Company;
 use App\Models\Estimate;
 use App\Models\Payment;
 use App\Models\QuickBill;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Stripe\StripeClient;
 
@@ -115,97 +116,284 @@ class StripeConnectService
 
     public function createEstimateCheckout(Estimate $estimate, string $purpose): Payment
     {
-        $estimate->loadMissing(['company', 'client']);
-
         abort_unless(
             in_array($purpose, ['deposit', 'final'], true),
             422,
             'Unsupported estimate payment purpose.'
         );
 
-        $expectedStatus = $purpose === 'deposit' ? 'deposit_due' : 'balance_due';
+        return DB::transaction(function () use ($estimate, $purpose) {
+            $estimate = Estimate::query()
+                ->with(['company', 'client'])
+                ->lockForUpdate()
+                ->findOrFail($estimate->id);
 
-        abort_unless(
-            $estimate->status === $expectedStatus,
-            409,
-            'This payment is not currently due.'
-        );
+            $expectedStatus = $purpose === 'deposit'
+                ? 'deposit_due'
+                : 'balance_due';
 
-        abort_unless(
-            $estimate->company->hasHealthyStripeConnection(),
-            409,
-            'Online payments are not ready for this contractor.'
-        );
+            abort_unless(
+                $estimate->status === $expectedStatus,
+                409,
+                'This payment is not currently due.'
+            );
 
-        $amountDue = $purpose === 'deposit'
-            ? max(0, $estimate->deposit_cents - $estimate->depositPaidCents())
-            : $estimate->balanceDueCents();
+            abort_unless(
+                $estimate->company->hasHealthyStripeConnection(),
+                409,
+                'Online payments are not ready for this contractor.'
+            );
 
-        abort_if($amountDue <= 0, 409, 'This payment has already been satisfied.');
+            $amountDue = $purpose === 'deposit'
+                ? max(0, $estimate->deposit_cents - $estimate->depositPaidCents())
+                : $estimate->balanceDueCents();
 
-        return $this->createCheckout(
-            company: $estimate->company,
-            clientEmail: $estimate->client->email,
-            amountCents: $amountDue,
-            feeCents: $this->estimateFeeCents($estimate, $amountDue),
-            purpose: $purpose,
-            description: $purpose === 'deposit'
-                ? "Deposit for {$estimate->estimate_number}"
-                : "Final balance for {$estimate->estimate_number}",
-            successUrl: route('portal.payment.return', $estimate->portal_token)
-                . '?session_id={CHECKOUT_SESSION_ID}',
-            cancelUrl: route('portal.show', $estimate->portal_token),
-            paymentAttributes: [
-                'client_id' => $estimate->client_id,
-                'estimate_id' => $estimate->id,
-            ],
-            metadata: [
-                'estimate_id' => (string) $estimate->id,
-                'estimate_number' => $estimate->estimate_number,
-                'estimate_version' => $estimate->version,
-                'project_fee_cap_cents' => self::PROJECT_FEE_CAP_CENTS,
-            ],
-        );
+            abort_if(
+                $amountDue <= 0,
+                409,
+                'This payment has already been satisfied.'
+            );
+
+            $activeCheckoutKey = "estimate:{$estimate->id}:{$purpose}";
+
+            if ($existing = $this->reusableCheckout(
+                $estimate->company,
+                $activeCheckoutKey,
+                $amountDue
+            )) {
+                return $existing;
+            }
+
+            return $this->createCheckout(
+                company: $estimate->company,
+                clientEmail: $estimate->client->email,
+                amountCents: $amountDue,
+                feeCents: $this->estimateFeeCents($estimate, $amountDue),
+                purpose: $purpose,
+                description: $purpose === 'deposit'
+                    ? "Deposit for {$estimate->estimate_number}"
+                    : "Final balance for {$estimate->estimate_number}",
+                successUrl: route('portal.payment.return', $estimate->portal_token)
+                    . '?session_id={CHECKOUT_SESSION_ID}',
+                cancelUrl: route('portal.show', $estimate->portal_token),
+                paymentAttributes: [
+                    'client_id' => $estimate->client_id,
+                    'estimate_id' => $estimate->id,
+                ],
+                metadata: [
+                    'estimate_id' => (string) $estimate->id,
+                    'estimate_number' => $estimate->estimate_number,
+                    'estimate_version' => $estimate->version,
+                    'project_fee_cap_cents' => self::PROJECT_FEE_CAP_CENTS,
+                ],
+                activeCheckoutKey: $activeCheckoutKey,
+            );
+        });
     }
 
     public function createQuickBillCheckout(QuickBill $quickBill): Payment
     {
-        $quickBill->loadMissing(['company', 'client']);
+        return DB::transaction(function () use ($quickBill) {
+            $quickBill = QuickBill::query()
+                ->with(['company', 'client'])
+                ->lockForUpdate()
+                ->findOrFail($quickBill->id);
 
-        abort_unless(
-            $quickBill->status === 'payment_due',
-            409,
-            'This Quick Bill is not currently due.'
+            abort_unless(
+                $quickBill->status === 'payment_due',
+                409,
+                'This Quick Bill is not currently due.'
+            );
+
+            abort_unless(
+                $quickBill->company->hasHealthyStripeConnection(),
+                409,
+                'Online payments are not ready for this contractor.'
+            );
+
+            $amountDue = $quickBill->balanceDueCents();
+
+            abort_if(
+                $amountDue <= 0,
+                409,
+                'This Quick Bill has already been paid.'
+            );
+
+            $activeCheckoutKey = "quick_bill:{$quickBill->id}";
+
+            if ($existing = $this->reusableCheckout(
+                $quickBill->company,
+                $activeCheckoutKey,
+                $amountDue
+            )) {
+                return $existing;
+            }
+
+            return $this->createCheckout(
+                company: $quickBill->company,
+                clientEmail: $quickBill->client->email,
+                amountCents: $amountDue,
+                feeCents: min(
+                    self::NORMAL_FEE_CENTS,
+                    max(0, $amountDue - 1)
+                ),
+                purpose: 'quick_bill',
+                description: "{$quickBill->quick_bill_number}: {$quickBill->description}",
+                successUrl: route(
+                    'portal.quick-bill.return',
+                    $quickBill->portal_token
+                ).'?session_id={CHECKOUT_SESSION_ID}',
+                cancelUrl: route(
+                    'portal.quick-bill.show',
+                    $quickBill->portal_token
+                ),
+                paymentAttributes: [
+                    'client_id' => $quickBill->client_id,
+                    'quick_bill_id' => $quickBill->id,
+                ],
+                metadata: [
+                    'quick_bill_id' => (string) $quickBill->id,
+                    'quick_bill_number' => $quickBill->quick_bill_number,
+                ],
+                activeCheckoutKey: $activeCheckoutKey,
+            );
+        });
+    }
+
+    public function retireActiveCheckout(
+        Company $company,
+        string $activeCheckoutKey,
+        string $reason = 'superseded'
+    ): void {
+        $payment = Payment::query()
+            ->where('provider', 'stripe')
+            ->where('status', 'pending')
+            ->where('active_checkout_key', $activeCheckoutKey)
+            ->first();
+
+        if (! $payment) {
+            return;
+        }
+
+        if (! $payment->provider_checkout_session_id) {
+            abort(
+                409,
+                'A payment checkout is currently being prepared. Please try again.'
+            );
+        }
+
+        $session = $this->client()->checkout->sessions->retrieve(
+            $payment->provider_checkout_session_id,
+            [],
+            ['stripe_account' => $company->stripe_account_id]
         );
 
-        abort_unless(
-            $quickBill->company->hasHealthyStripeConnection(),
-            409,
-            'Online payments are not ready for this contractor.'
+        if (($session->payment_status ?? null) === 'paid') {
+            abort(
+                409,
+                'An online payment has already been submitted and is being processed.'
+            );
+        }
+
+        if (($session->status ?? null) === 'open') {
+            $this->client()->checkout->sessions->expire(
+                $payment->provider_checkout_session_id,
+                [],
+                ['stripe_account' => $company->stripe_account_id]
+            );
+        } elseif (($session->status ?? null) !== 'expired') {
+            abort(
+                409,
+                'An online payment is currently being processed.'
+            );
+        }
+
+        $payment->update([
+            'status' => 'failed',
+            'active_checkout_key' => null,
+            'failed_at' => now(),
+            'metadata' => array_merge($payment->metadata ?? [], [
+                'checkout_closed_reason' => $reason,
+            ]),
+        ]);
+    }
+
+    private function reusableCheckout(
+        Company $company,
+        string $activeCheckoutKey,
+        int $expectedAmountCents
+    ): ?Payment {
+        $payment = Payment::query()
+            ->where('provider', 'stripe')
+            ->where('status', 'pending')
+            ->where('active_checkout_key', $activeCheckoutKey)
+            ->first();
+
+        if (! $payment) {
+            return null;
+        }
+
+        if (! $payment->provider_checkout_session_id) {
+            abort(
+                409,
+                'A payment checkout is already being prepared. Please try again.'
+            );
+        }
+
+        $session = $this->client()->checkout->sessions->retrieve(
+            $payment->provider_checkout_session_id,
+            [],
+            ['stripe_account' => $company->stripe_account_id]
         );
 
-        $amountDue = $quickBill->balanceDueCents();
+        if (($session->payment_status ?? null) === 'paid') {
+            abort(
+                409,
+                'This payment has already been submitted and is being processed.'
+            );
+        }
 
-        abort_if($amountDue <= 0, 409, 'This Quick Bill has already been paid.');
+        if (($session->status ?? null) === 'open') {
+            if ($payment->amount_cents === $expectedAmountCents) {
+                $payment->setAttribute('checkout_url', $session->url);
 
-        return $this->createCheckout(
-            company: $quickBill->company,
-            clientEmail: $quickBill->client->email,
-            amountCents: $amountDue,
-            feeCents: min(self::NORMAL_FEE_CENTS, max(0, $amountDue - 1)),
-            purpose: 'quick_bill',
-            description: "{$quickBill->quick_bill_number}: {$quickBill->description}",
-            successUrl: route('portal.quick-bill.return', $quickBill->portal_token)
-                . '?session_id={CHECKOUT_SESSION_ID}',
-            cancelUrl: route('portal.quick-bill.show', $quickBill->portal_token),
-            paymentAttributes: [
-                'client_id' => $quickBill->client_id,
-                'quick_bill_id' => $quickBill->id,
-            ],
-            metadata: [
-                'quick_bill_id' => (string) $quickBill->id,
-                'quick_bill_number' => $quickBill->quick_bill_number,
-            ],
+                return $payment;
+            }
+
+            $this->client()->checkout->sessions->expire(
+                $payment->provider_checkout_session_id,
+                [],
+                ['stripe_account' => $company->stripe_account_id]
+            );
+
+            $payment->update([
+                'status' => 'failed',
+                'active_checkout_key' => null,
+                'failed_at' => now(),
+                'metadata' => array_merge($payment->metadata ?? [], [
+                    'checkout_closed_reason' => 'amount_changed',
+                ]),
+            ]);
+
+            return null;
+        }
+
+        if (($session->status ?? null) === 'expired') {
+            $payment->update([
+                'status' => 'failed',
+                'active_checkout_key' => null,
+                'failed_at' => now(),
+                'metadata' => array_merge($payment->metadata ?? [], [
+                    'checkout_closed_reason' => 'expired',
+                ]),
+            ]);
+
+            return null;
+        }
+
+        abort(
+            409,
+            'This payment has already been submitted and is being processed.'
         );
     }
 
@@ -236,17 +424,41 @@ class StripeConnectService
         string $cancelUrl,
         array $paymentAttributes,
         array $metadata,
+        string $activeCheckoutKey,
     ): Payment {
-        $payment = Payment::create(array_merge([
-            'company_id' => $company->id,
-            'provider' => 'stripe',
-            'purpose' => $purpose,
-            'status' => 'pending',
-            'amount_cents' => $amountCents,
-            'platform_fee_cents' => $feeCents,
-            'currency' => 'usd',
-            'metadata' => $metadata,
-        ], $paymentAttributes));
+        try {
+            $payment = Payment::create(array_merge([
+                'company_id' => $company->id,
+                'provider' => 'stripe',
+                'purpose' => $purpose,
+                'status' => 'pending',
+                'active_checkout_key' => $activeCheckoutKey,
+                'amount_cents' => $amountCents,
+                'platform_fee_cents' => $feeCents,
+                'currency' => 'usd',
+                'metadata' => $metadata,
+            ], $paymentAttributes));
+        } catch (\Illuminate\Database\QueryException $e) {
+            $existing = Payment::query()
+                ->where('provider', 'stripe')
+                ->where('status', 'pending')
+                ->where('active_checkout_key', $activeCheckoutKey)
+                ->first();
+
+            if ($existing) {
+                $existing = $this->reusableCheckout(
+                    $company,
+                    $activeCheckoutKey,
+                    $amountCents
+                );
+
+                if ($existing) {
+                    return $existing;
+                }
+            }
+
+            throw $e;
+        }
 
         try {
             $intentData = [
@@ -285,6 +497,7 @@ class StripeConnectService
                 'cancel_url' => $cancelUrl,
             ], [
                 'stripe_account' => $company->stripe_account_id,
+                'idempotency_key' => 'checkout-payment-'.$payment->id,
             ]);
 
             $payment->update([
@@ -297,6 +510,7 @@ class StripeConnectService
         } catch (\Throwable $e) {
             $payment->update([
                 'status' => 'failed',
+                'active_checkout_key' => null,
                 'failed_at' => now(),
                 'metadata' => array_merge($payment->metadata ?? [], [
                     'checkout_error' => $e->getMessage(),

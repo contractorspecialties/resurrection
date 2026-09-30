@@ -50,7 +50,10 @@ class StripeWebhookController extends Controller
                 $this->handleSuccessfulCheckout($object, $paymentState);
             }
 
-            if ($event->type === 'checkout.session.async_payment_failed') {
+            if (in_array($event->type, [
+                'checkout.session.async_payment_failed',
+                'checkout.session.expired',
+            ], true)) {
                 $this->handleFailedCheckout($object);
             }
 
@@ -81,6 +84,7 @@ class StripeWebhookController extends Controller
         if ($payment->status !== 'paid') {
             $payment->update([
                 'status' => 'paid',
+                'active_checkout_key' => null,
                 'provider_payment_intent_id' => is_string($session->payment_intent ?? null)
                     ? $session->payment_intent
                     : ($session->payment_intent->id ?? null),
@@ -105,6 +109,7 @@ class StripeWebhookController extends Controller
 
         $payment->update([
             'status' => 'failed',
+            'active_checkout_key' => null,
             'failed_at' => now(),
         ]);
     }
