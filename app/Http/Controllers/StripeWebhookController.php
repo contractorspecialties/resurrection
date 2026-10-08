@@ -57,6 +57,10 @@ class StripeWebhookController extends Controller
                 $this->handleFailedCheckout($object);
             }
 
+            if ($event->type === 'charge.refunded') {
+                $this->handleRefundedCharge($object, $paymentState);
+            }
+
             $record->update(['processed_at' => now()]);
         });
 
@@ -91,6 +95,67 @@ class StripeWebhookController extends Controller
                 'paid_at' => now(),
             ]);
         }
+
+        $paymentState->reconcile($payment->fresh());
+    }
+
+    private function handleRefundedCharge(
+        object $charge,
+        PaymentStateService $paymentState
+    ): void {
+        $paymentIntentId = is_string($charge->payment_intent ?? null)
+            ? $charge->payment_intent
+            : ($charge->payment_intent->id ?? null);
+
+        $payment = Payment::query()
+            ->where('provider', 'stripe')
+            ->where(function ($query) use ($charge, $paymentIntentId) {
+                if ($paymentIntentId) {
+                    $query->where(
+                        'provider_payment_intent_id',
+                        $paymentIntentId
+                    );
+                }
+
+                if (isset($charge->id)) {
+                    if ($paymentIntentId) {
+                        $query->orWhere(
+                            'provider_charge_id',
+                            $charge->id
+                        );
+                    } else {
+                        $query->where(
+                            'provider_charge_id',
+                            $charge->id
+                        );
+                    }
+                }
+            })
+            ->lockForUpdate()
+            ->first();
+
+        if (! $payment) {
+            return;
+        }
+
+        $refundedAmount = min(
+            $payment->amount_cents,
+            max(0, (int) ($charge->amount_refunded ?? 0))
+        );
+
+        if ($refundedAmount <= 0) {
+            return;
+        }
+
+        $payment->update([
+            'status' => $refundedAmount >= $payment->amount_cents
+                ? 'refunded'
+                : 'paid',
+            'provider_charge_id' => $charge->id ?? $payment->provider_charge_id,
+            'refunded_amount_cents' => $refundedAmount,
+            'refunded_at' => now(),
+            'active_checkout_key' => null,
+        ]);
 
         $paymentState->reconcile($payment->fresh());
     }

@@ -67,8 +67,12 @@ class Estimate extends Model
     public function paidAmountCents(): int
     {
         return (int) $this->payments()
-            ->where('status', 'paid')
-            ->sum('amount_cents');
+            ->whereIn('status', ['paid', 'refunded'])
+            ->get(['amount_cents', 'refunded_amount_cents'])
+            ->sum(fn ($payment) => max(
+                0,
+                $payment->amount_cents - $payment->refunded_amount_cents
+            ));
     }
 
     public function balanceDueCents(): int
@@ -79,9 +83,13 @@ class Estimate extends Model
     public function depositPaidCents(): int
     {
         return (int) $this->payments()
-            ->where('status', 'paid')
+            ->whereIn('status', ['paid', 'refunded'])
             ->where('purpose', 'deposit')
-            ->sum('amount_cents');
+            ->get(['amount_cents', 'refunded_amount_cents'])
+            ->sum(fn ($payment) => max(
+                0,
+                $payment->amount_cents - $payment->refunded_amount_cents
+            ));
     }
 
     public function money(int $cents): string

@@ -10,10 +10,6 @@ class PaymentStateService
 {
     public function reconcile(Payment $payment): void
     {
-        if ($payment->status !== 'paid') {
-            return;
-        }
-
         if ($payment->estimate_id) {
             $this->reconcileEstimate($payment);
         }
@@ -33,19 +29,36 @@ class PaymentStateService
             return;
         }
 
-        if (
-            $payment->purpose === 'deposit'
-            && $estimate->depositPaidCents() >= $estimate->deposit_cents
-            && $estimate->status === 'deposit_due'
-        ) {
-            $estimate->update(['status' => 'active_job']);
+        $paidAmount = $estimate->paidAmountCents();
+        $depositPaid = $estimate->depositPaidCents();
+
+        if ($paidAmount >= $estimate->total_cents) {
+            $estimate->update(['status' => 'paid']);
+
+            return;
+        }
+
+        if (in_array($estimate->status, ['paid', 'balance_due'], true)) {
+            $estimate->update(['status' => 'balance_due']);
+
+            return;
         }
 
         if (
-            $payment->purpose === 'final'
-            && $estimate->paidAmountCents() >= $estimate->total_cents
+            $estimate->deposit_cents > 0
+            && $depositPaid < $estimate->deposit_cents
+            && in_array($estimate->status, ['deposit_due', 'active_job'], true)
         ) {
-            $estimate->update(['status' => 'paid']);
+            $estimate->update(['status' => 'deposit_due']);
+
+            return;
+        }
+
+        if (
+            $estimate->status === 'deposit_due'
+            && $depositPaid >= $estimate->deposit_cents
+        ) {
+            $estimate->update(['status' => 'active_job']);
         }
     }
 
@@ -60,9 +73,20 @@ class PaymentStateService
         }
 
         if ($quickBill->paidAmountCents() >= $quickBill->amount_cents) {
+            if ($quickBill->status !== 'paid') {
+                $quickBill->update([
+                    'status' => 'paid',
+                    'paid_at' => $payment->paid_at ?? now(),
+                ]);
+            }
+
+            return;
+        }
+
+        if ($quickBill->status === 'paid') {
             $quickBill->update([
-                'status' => 'paid',
-                'paid_at' => $payment->paid_at ?? now(),
+                'status' => 'payment_due',
+                'paid_at' => null,
             ]);
         }
     }

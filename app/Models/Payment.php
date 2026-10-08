@@ -18,6 +18,7 @@ class Payment extends Model
         'active_checkout_key',
         'amount_cents',
         'platform_fee_cents',
+        'refunded_amount_cents',
         'currency',
         'provider_checkout_session_id',
         'provider_payment_intent_id',

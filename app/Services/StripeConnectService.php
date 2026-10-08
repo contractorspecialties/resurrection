@@ -401,7 +401,7 @@ class StripeConnectService
     {
         $alreadyCollected = (int) Payment::query()
             ->where('estimate_id', $estimate->id)
-            ->where('status', 'paid')
+            ->whereIn('status', ['paid', 'refunded'])
             ->sum('platform_fee_cents');
 
         $remainingCap = max(0, self::PROJECT_FEE_CAP_CENTS - $alreadyCollected);
