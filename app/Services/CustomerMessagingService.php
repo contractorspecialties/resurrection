@@ -217,6 +217,79 @@ class CustomerMessagingService
         );
     }
 
+    public function sendJobReminderEmail(
+        Company $company,
+        int $jobCount
+    ): CommunicationLog {
+        $company->loadMissing('owner');
+
+        $recipient = trim((string) $company->owner?->email);
+
+        if ($recipient === '') {
+            throw new RuntimeException('The account owner does not have an email address.');
+        }
+
+        $subject = $jobCount === 1
+            ? 'You have a job today'
+            : "You have {$jobCount} jobs today";
+
+        $message = $jobCount === 1
+            ? 'Morning. You’ve got money to make today. Log in to ContractorSpecialties to review today’s job, customer details, notes, and payment status.'
+            : "Morning. You’ve got money to make today. You have {$jobCount} jobs scheduled. Log in to ContractorSpecialties to review the details.";
+
+        $url = route('dashboard');
+
+        $log = $this->makeLog(
+            company: $company,
+            client: null,
+            channel: 'email',
+            recipient: $recipient,
+            purpose: 'job_reminder',
+            subject: $subject,
+            message: $message,
+        );
+
+        try {
+            Mail::html(
+                '<p>'.e($message).'</p>'
+                .'<p><a href="'.e($url).'">Open ContractorSpecialties</a></p>',
+                function ($mail) use ($recipient, $subject) {
+                    $mail->to($recipient)->subject($subject);
+                }
+            );
+
+            $this->markSent($log, config('mail.default'));
+        } catch (Throwable $e) {
+            $this->fail($log, $e);
+            throw $e;
+        }
+
+        return $log->refresh();
+    }
+
+    public function sendJobReminderSms(
+        Company $company,
+        int $jobCount
+    ): CommunicationLog {
+        $this->assertSmsEntitled($company);
+
+        $recipient = $this->normalizeUsPhone(
+            (string) $company->job_reminder_phone
+        );
+
+        $message = $jobCount === 1
+            ? 'Morning. You’ve got money to make today. Open ContractorSpecialties to review today’s job: '.route('dashboard')
+            : "Morning. You’ve got money to make today. {$jobCount} jobs are scheduled: ".route('dashboard');
+
+        return $this->sendTelnyxSms(
+            company: $company,
+            client: null,
+            recipient: $recipient,
+            message: $message,
+            purpose: 'job_reminder',
+        );
+    }
+
     private function sendTelnyxSms(
         Company $company,
         ?Client $client,

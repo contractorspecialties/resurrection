@@ -16,6 +16,8 @@ class Company extends Model
         'city',
         'state',
         'preferred_customer_contact',
+        'job_reminder_phone',
+        'job_reminder_channel',
         'stripe_account_id',
         'stripe_details_submitted',
         'stripe_charges_enabled',

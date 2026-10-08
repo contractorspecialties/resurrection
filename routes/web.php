@@ -130,6 +130,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/dashboard', [DashboardController::class, 'index'])
             ->name('dashboard');
 
+        Route::post('/dashboard/job-reminders', [DashboardController::class, 'updateJobReminders'])
+            ->name('dashboard.job-reminders');
+
 
         /*
         |--------------------------------------------------------------------------
@@ -222,6 +225,9 @@ Route::middleware('auth')->group(function () {
 
         Route::post('/estimates/{estimate}/balance-due', [EstimateBalanceController::class, 'makeDue'])
             ->name('estimates.balance-due');
+
+        Route::post('/estimates/{estimate}/job-date', [EstimateController::class, 'setJobDate'])
+            ->name('estimates.job-date');
 
 
         /*

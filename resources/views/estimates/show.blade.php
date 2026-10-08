@@ -49,6 +49,37 @@
     </div>
 </div>
 
+@if(in_array($estimate->status, ['active_job', 'balance_due'], true))
+<div class="card" style="margin-top:20px">
+    <div class="kicker">Job schedule</div>
+    <h2 style="margin:8px 0">When are you doing the work?</h2>
+
+    <form method="POST" action="{{ route('estimates.job-date', $estimate) }}">
+        @csrf
+
+        <div style="display:flex;gap:12px;align-items:end;flex-wrap:wrap">
+            <div class="field" style="margin:0;min-width:220px">
+                <label for="job_date">Job date</label>
+                <input
+                    id="job_date"
+                    name="job_date"
+                    type="date"
+                    value="{{ old('job_date', $estimate->job_date?->format('Y-m-d')) }}"
+                >
+            </div>
+
+            <button class="btn btn-secondary" type="submit">
+                Save Job Date
+            </button>
+        </div>
+
+        <div class="help" style="margin-top:8px">
+            A morning reminder can be sent on scheduled job days.
+        </div>
+    </form>
+</div>
+@endif
+
 @if($estimate->scope_summary)
 <div class="card" style="margin-top:20px">
     <div class="kicker">Scope of work</div>

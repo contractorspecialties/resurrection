@@ -39,6 +39,51 @@
     </div>
 </div>
 
+<div class="card" style="margin-top:20px">
+    <div class="kicker">Morning job reminder</div>
+    <h2 style="margin:6px 0 10px">You’ve got money to make.</h2>
+    <p class="muted">
+        If you have a job scheduled today, ContractorSpecialties can remind you once in the morning.
+    </p>
+
+    <form method="POST" action="{{ route('dashboard.job-reminders') }}">
+        @csrf
+
+        <div class="grid grid-2">
+            <div class="field">
+                <label for="job_reminder_channel">Send reminder by</label>
+                <select id="job_reminder_channel" name="job_reminder_channel">
+                    @foreach([
+                        'off' => 'Off',
+                        'email' => 'Email',
+                        'sms' => 'SMS',
+                        'both' => 'Email + SMS',
+                    ] as $value => $label)
+                        <option value="{{ $value }}"
+                            @selected(old('job_reminder_channel', $company->job_reminder_channel ?? 'email') === $value)>
+                            {{ $label }}
+                        </option>
+                    @endforeach
+                </select>
+            </div>
+
+            <div class="field">
+                <label for="job_reminder_phone">Mobile number for SMS</label>
+                <input
+                    id="job_reminder_phone"
+                    name="job_reminder_phone"
+                    value="{{ old('job_reminder_phone', $company->job_reminder_phone) }}"
+                    placeholder="(555) 555-1212"
+                >
+            </div>
+        </div>
+
+        <button class="btn btn-secondary" type="submit">
+            Save Reminder Settings
+        </button>
+    </form>
+</div>
+
 <div class="grid grid-2" style="margin-top:20px">
     <div class="card">
         <div class="kicker">Recent estimates</div>

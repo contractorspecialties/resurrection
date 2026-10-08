@@ -173,6 +173,32 @@ class EstimateController extends Controller
             ->with('status', "{$estimate->estimate_number} is ready for the customer.");
     }
 
+    public function setJobDate(Request $request, Estimate $estimate): RedirectResponse
+    {
+        $this->authorizeEstimate($request, $estimate);
+
+        abort_unless(
+            in_array($estimate->status, ['active_job', 'balance_due'], true),
+            409,
+            'A job date can only be set after the estimate becomes a job.'
+        );
+
+        $data = $request->validate([
+            'job_date' => ['nullable', 'date'],
+        ]);
+
+        $estimate->update([
+            'job_date' => $data['job_date'] ?: null,
+        ]);
+
+        return back()->with(
+            'status',
+            $estimate->job_date
+                ? 'Job date saved.'
+                : 'Job date cleared.'
+        );
+    }
+
     private function validated(Request $request): array
     {
         return $request->validate([

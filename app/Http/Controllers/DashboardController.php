@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class DashboardController extends Controller
@@ -44,5 +46,40 @@ class DashboardController extends Controller
             'recentEstimates',
             'recentQuickBills'
         ));
+    }
+
+    public function updateJobReminders(Request $request): RedirectResponse
+    {
+        $data = $request->validate([
+            'job_reminder_channel' => [
+                'required',
+                Rule::in(['off', 'email', 'sms', 'both']),
+            ],
+            'job_reminder_phone' => [
+                'nullable',
+                'string',
+                'max:40',
+            ],
+        ]);
+
+        if (
+            in_array($data['job_reminder_channel'], ['sms', 'both'], true)
+            && blank($data['job_reminder_phone'] ?? null)
+        ) {
+            return back()
+                ->withErrors([
+                    'job_reminder_phone' => 'Add a mobile number for SMS reminders.',
+                ])
+                ->withInput();
+        }
+
+        $request->user()->company->update([
+            'job_reminder_channel' => $data['job_reminder_channel'],
+            'job_reminder_phone' => filled($data['job_reminder_phone'] ?? null)
+                ? trim($data['job_reminder_phone'])
+                : null,
+        ]);
+
+        return back()->with('status', 'Job reminder settings saved.');
     }
 }

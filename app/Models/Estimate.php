@@ -23,6 +23,7 @@ class Estimate extends Model
         'tax_rate',
         'sent_at',
         'accepted_at',
+        'job_date',
     ];
 
     protected function casts(): array
@@ -31,6 +32,7 @@ class Estimate extends Model
             'tax_rate' => 'decimal:3',
             'sent_at' => 'datetime',
             'accepted_at' => 'datetime',
+            'job_date' => 'date',
         ];
     }
 
