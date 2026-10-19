@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\MagicLoginController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\CustomerMessageController;
 use App\Http\Controllers\DashboardController;
@@ -35,6 +36,18 @@ Route::middleware(['auth', EnsureInternalAdmin::class])
     });
 
 Route::view('/', 'welcome')->name('home');
+
+Route::middleware(['guest', 'throttle:5,1'])
+    ->post('/login/email', [MagicLoginController::class, 'send'])
+    ->name('magic-login.send');
+
+Route::middleware(['guest', 'throttle:10,1'])
+    ->get('/login/email/{token}', [MagicLoginController::class, 'confirm'])
+    ->name('magic-login.confirm');
+
+Route::middleware(['guest', 'throttle:10,1'])
+    ->post('/login/email/{token}', [MagicLoginController::class, 'consume'])
+    ->name('magic-login.consume');
 
 Route::middleware('guest')->group(function () {
     Route::get('/register', [AuthController::class, 'showRegister'])

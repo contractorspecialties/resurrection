@@ -12,6 +12,25 @@
         </div>
     </div>
 
+    <div class="card" style="margin-bottom:20px">
+        <h2>Sign in with email</h2>
+        <p>We'll email you a secure link. No password needed.</p>
+
+        <form method="POST" action="{{ route('magic-login.send') }}">
+            @csrf
+            <div class="field">
+                <label for="magic-email">Email address</label>
+                <input id="magic-email" type="email" name="email"
+                       value="{{ old('email') }}" autocomplete="email" required>
+            </div>
+            <button class="btn btn-primary" type="submit">
+                Email Me a Sign-In Link
+            </button>
+        </form>
+    </div>
+
+    <h2 style="margin-bottom:16px">Or sign in with your password</h2>
+
     <div class="card">
         <form method="POST" action="{{ route('login.store') }}">
             @csrf
