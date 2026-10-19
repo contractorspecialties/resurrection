@@ -19,6 +19,20 @@ use App\Http\Controllers\RecurringServiceController;
 use App\Http\Controllers\StripeWebhookController;
 use App\Http\Middleware\EnsureOnboardingCompleted;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\AdminController;
+use App\Http\Middleware\EnsureInternalAdmin;
+
+Route::middleware(['auth', EnsureInternalAdmin::class])
+    ->prefix('admin')
+    ->name('admin.')
+    ->group(function () {
+        Route::get('/', [AdminController::class, 'index'])
+            ->name('index');
+
+        Route::get('/companies/{company}', [AdminController::class, 'company'])
+            ->whereNumber('company')
+            ->name('company');
+    });
 
 Route::view('/', 'welcome')->name('home');
 
