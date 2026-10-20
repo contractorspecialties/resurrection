@@ -169,16 +169,23 @@ class SubscriptionBillingController extends Controller
                 ->lockForUpdate()
                 ->firstOrFail();
 
+            if (filled($record->stripe_subscription_id)) {
+                // A paid invoice webhook may beat this controller's
+                // final Checkout-session persistence transaction.
+                // Never resurrect pending fields after activation.
+                $record->update([
+                    'pending_checkout_attempt_id' => null,
+                    'pending_checkout_session_id' => null,
+                    'pending_checkout_expires_at' => null,
+                ]);
+
+                return;
+            }
+
             abort_unless(
                 $record->pending_checkout_attempt_id === $attempt['attempt_id'],
                 409,
                 'Subscription checkout attempt has changed.'
-            );
-
-            abort_if(
-                filled($record->stripe_subscription_id),
-                409,
-                'Subscription was already activated.'
             );
 
             abort_if(

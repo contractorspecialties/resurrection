@@ -186,6 +186,15 @@ class SubscriptionPaidWebhookIntegrationTest extends TestCase
 
         $this->fakeStripe($company, $end);
 
+        CompanySubscription::create([
+            'company_id' => $company->id,
+            'status' => 'inactive',
+            'pending_checkout_attempt_id' =>
+                '00aabbcc-1111-4222-8333-445566778899',
+            'pending_checkout_session_id' => 'cs_test_pending',
+            'pending_checkout_expires_at' => now()->addHour(),
+        ]);
+
         $this->assertFalse(
             app(SubscriptionEntitlementService::class)
                 ->hasPaidCoverage($company)
@@ -202,6 +211,9 @@ class SubscriptionPaidWebhookIntegrationTest extends TestCase
             $record->stripe_subscription_id
         );
         $this->assertSame($end, $record->paid_through_at->timestamp);
+        $this->assertNull($record->pending_checkout_attempt_id);
+        $this->assertNull($record->pending_checkout_session_id);
+        $this->assertNull($record->pending_checkout_expires_at);
         $this->assertTrue(
             app(SubscriptionEntitlementService::class)
                 ->hasPaidCoverage($company)

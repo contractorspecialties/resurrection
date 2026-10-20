@@ -277,6 +277,9 @@ class StripeSubscriptionEventService
                 'paid_through_at' => Carbon::createFromTimestampUTC($paidThrough)
                     ->setTimezone(config('app.timezone')),
                 'cancel_at_period_end' => $change['cancel_at_period_end'],
+                'pending_checkout_attempt_id' => null,
+                'pending_checkout_session_id' => null,
+                'pending_checkout_expires_at' => null,
             ]
         );
     }
