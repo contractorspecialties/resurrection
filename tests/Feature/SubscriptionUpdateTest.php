@@ -36,6 +36,7 @@ class SubscriptionUpdateTest extends TestCase
         return CompanySubscription::create([
             'company_id' => $company->id,
             'stripe_customer_id' => 'cus_update_test',
+            'stripe_livemode' => false,
             'stripe_subscription_id' => 'sub_update_test',
             'status' => 'active',
             'price_cents' => 1295,

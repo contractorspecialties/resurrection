@@ -57,6 +57,7 @@ class SubscriptionCheckoutFeeTest extends TestCase
         CompanySubscription::create([
             'company_id' => $company->id,
             'stripe_customer_id' => 'cus_test_'.$company->id,
+            'stripe_livemode' => false,
             'stripe_subscription_id' => 'sub_test_'.$company->id,
             'status' => 'active',
             'price_cents' => 1295,

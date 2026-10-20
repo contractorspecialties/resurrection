@@ -43,7 +43,9 @@ class SubscriptionPaidWebhookIntegrationTest extends TestCase
     private function fakeStripe(
         Company $company,
         int $periodEnd,
-        bool $validPrice = true
+        bool $validPrice = true,
+        bool $invoiceLive = false,
+        bool $subscriptionLive = false
     ): void {
         $priceId = 'price_monthly_integration';
         $actualPrice = $validPrice ? $priceId : 'price_unrelated';
@@ -51,6 +53,7 @@ class SubscriptionPaidWebhookIntegrationTest extends TestCase
         $invoice = $this->object([
             'id' => 'in_webhook_integration',
             'status' => 'paid',
+            'livemode' => $invoiceLive,
             'amount_paid' => 1295,
             'currency' => 'usd',
             'customer' => 'cus_webhook_integration',
@@ -64,6 +67,7 @@ class SubscriptionPaidWebhookIntegrationTest extends TestCase
         $subscription = $this->object([
             'id' => 'sub_webhook_integration',
             'customer' => 'cus_webhook_integration',
+            'livemode' => $subscriptionLive,
             'status' => 'active',
             'cancel_at_period_end' => false,
             'metadata' => [
@@ -206,6 +210,7 @@ class SubscriptionPaidWebhookIntegrationTest extends TestCase
             ->firstOrFail();
 
         $this->assertSame('active', $record->status);
+        $this->assertFalse($record->stripe_livemode);
         $this->assertSame(
             'sub_webhook_integration',
             $record->stripe_subscription_id
@@ -242,6 +247,36 @@ class SubscriptionPaidWebhookIntegrationTest extends TestCase
             $end,
             CompanySubscription::firstOrFail()->paid_through_at->timestamp
         );
+    }
+
+    public function test_live_invoice_cannot_activate_in_test_environment(): void
+    {
+        $company = $this->company();
+        $this->fakeStripe(
+            $company,
+            now()->addMonth()->timestamp,
+            invoiceLive: true
+        );
+
+        $this->deliver('evt_wrong_invoice_mode')->assertStatus(500);
+
+        $this->assertSame(0, CompanySubscription::count());
+        $this->assertSame(0, SubscriptionEvent::count());
+    }
+
+    public function test_live_subscription_cannot_activate_in_test_environment(): void
+    {
+        $company = $this->company();
+        $this->fakeStripe(
+            $company,
+            now()->addMonth()->timestamp,
+            subscriptionLive: true
+        );
+
+        $this->deliver('evt_wrong_subscription_mode')->assertStatus(500);
+
+        $this->assertSame(0, CompanySubscription::count());
+        $this->assertSame(0, SubscriptionEvent::count());
     }
 
     public function test_wrong_invoice_price_cannot_activate_subscription(): void

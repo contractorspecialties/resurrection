@@ -58,6 +58,7 @@ class SubscriptionEventProcessorTest extends TestCase
         return CompanySubscription::create([
             'company_id' => $company->id,
             'stripe_customer_id' => 'cus_owner_test',
+            'stripe_livemode' => false,
             'stripe_subscription_id' => 'sub_owner_test',
             'status' => 'active',
             'paid_through_at' => now()->addDays(10),

@@ -136,6 +136,22 @@ class StripeSubscriptionEventService
             ['expand' => ['items.data.price']]
         );
 
+        $key = (string) config('services.stripe.secret');
+
+        $expectedLive = str_starts_with($key, 'sk_live_')
+            ? true
+            : (str_starts_with($key, 'sk_test_') ? false : null);
+
+        if (
+            $expectedLive === null
+            || ! is_bool($invoice->livemode ?? null)
+            || ! is_bool($subscription->livemode ?? null)
+            || $invoice->livemode !== $expectedLive
+            || $subscription->livemode !== $expectedLive
+        ) {
+            throw new RuntimeException('Stripe invoice environment mismatch.');
+        }
+
         $invoiceCustomer = $this->stripeId($invoice->customer ?? null);
         $subscriptionCustomer = $this->stripeId($subscription->customer ?? null);
 
@@ -217,6 +233,7 @@ class StripeSubscriptionEventService
             'subscription_id' => $subscriptionId,
             'customer_id' => $this->stripeId($subscription->customer),
             'paid_through' => $paidThrough,
+            'stripe_livemode' => $expectedLive,
             'status' => $subscription->status,
             'cancel_at_period_end' => (bool) $subscription->cancel_at_period_end,
         ];
@@ -271,6 +288,7 @@ class StripeSubscriptionEventService
             [
                 'stripe_customer_id' => $change['customer_id'],
                 'stripe_subscription_id' => $change['subscription_id'],
+                'stripe_livemode' => $change['stripe_livemode'],
                 'status' => $change['status'],
                 'price_cents' => 1295,
                 'currency' => 'usd',

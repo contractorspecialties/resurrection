@@ -88,6 +88,7 @@ class SubscriptionCheckoutIntegrationTest extends TestCase
         CompanySubscription::create([
             'company_id' => $company->id,
             'stripe_customer_id' => 'cus_integration_test',
+            'stripe_livemode' => false,
             'stripe_subscription_id' => 'sub_integration_test',
             'status' => 'active',
             'price_cents' => 1295,

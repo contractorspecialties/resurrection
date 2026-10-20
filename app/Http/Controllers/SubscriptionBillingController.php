@@ -58,7 +58,7 @@ class SubscriptionBillingController extends Controller
         );
 
         // Commit the attempt BEFORE contacting Stripe.
-        $attempt = DB::transaction(function () use ($company): array {
+        $attempt = DB::transaction(function () use ($company, $live): array {
             $lockedCompany = \App\Models\Company::query()
                 ->lockForUpdate()
                 ->findOrFail($company->id);
@@ -74,6 +74,25 @@ class SubscriptionBillingController extends Controller
                     'status' => 'inactive',
                 ]);
             }
+
+            // Existing Stripe identities must never cross environments.
+            // An entirely new record can be assigned the current mode.
+            $hasStripeIdentity =
+                filled($record->stripe_customer_id)
+                || filled($record->stripe_subscription_id)
+                || filled($record->pending_checkout_attempt_id)
+                || filled($record->pending_checkout_session_id);
+
+            if (! $hasStripeIdentity && $record->stripe_livemode === null) {
+                $record->update(['stripe_livemode' => $live]);
+            }
+
+            abort_unless(
+                $record->stripe_livemode !== null
+                && $record->stripe_livemode === $live,
+                409,
+                'Subscription billing environment requires reconciliation.'
+            );
 
             abort_if(
                 filled($record->stripe_subscription_id),
@@ -163,11 +182,18 @@ class SubscriptionBillingController extends Controller
             'Stripe did not return an open subscription checkout.'
         );
 
-        DB::transaction(function () use ($company, $attempt, $session): void {
+        DB::transaction(function () use ($company, $attempt, $session, $live): void {
             $record = CompanySubscription::query()
                 ->where('company_id', $company->id)
                 ->lockForUpdate()
                 ->firstOrFail();
+
+            abort_unless(
+                $record->stripe_livemode !== null
+                && $record->stripe_livemode === $live,
+                409,
+                'Subscription billing environment changed.'
+            );
 
             if (filled($record->stripe_subscription_id)) {
                 // A paid invoice webhook may beat this controller's
@@ -225,6 +251,19 @@ class SubscriptionBillingController extends Controller
             filled($subscription?->stripe_customer_id),
             404,
             'No subscription billing account was found.'
+        );
+
+        $key = (string) config('services.stripe.secret');
+        $live = str_starts_with($key, 'sk_live_')
+            ? true
+            : (str_starts_with($key, 'sk_test_') ? false : null);
+
+        abort_unless(
+            $live !== null
+            && $subscription->stripe_livemode !== null
+            && $subscription->stripe_livemode === $live,
+            409,
+            'Subscription billing environment requires reconciliation.'
         );
 
         $session = $stripeConnect->client()

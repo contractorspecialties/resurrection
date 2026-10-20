@@ -37,6 +37,7 @@ class SubscriptionCancellationTest extends TestCase
         CompanySubscription::create([
             'company_id' => $company->id,
             'stripe_customer_id' => 'cus_prepaid_1',
+            'stripe_livemode' => false,
             'stripe_subscription_id' => 'sub_prepaid_1',
             'status' => 'canceled',
             'paid_through_at' => now()->addDays(12),
@@ -52,6 +53,7 @@ class SubscriptionCancellationTest extends TestCase
         CompanySubscription::create([
             'company_id' => $company->id,
             'stripe_customer_id' => 'cus_prepaid_2',
+            'stripe_livemode' => false,
             'stripe_subscription_id' => 'sub_prepaid_2',
             'status' => 'canceled',
             'paid_through_at' => now()->subMinute(),
@@ -67,6 +69,7 @@ class SubscriptionCancellationTest extends TestCase
         $subscription = CompanySubscription::create([
             'company_id' => $company->id,
             'stripe_customer_id' => 'cus_prepaid_3',
+            'stripe_livemode' => false,
             'stripe_subscription_id' => 'sub_prepaid_3',
             'status' => 'past_due',
             'paid_through_at' => now()->addDay(),
@@ -88,6 +91,7 @@ class SubscriptionCancellationTest extends TestCase
         CompanySubscription::create([
             'company_id' => $company->id,
             'stripe_customer_id' => 'cus_prepaid_4',
+            'stripe_livemode' => false,
             'stripe_subscription_id' => 'sub_prepaid_4',
             'status' => 'canceled',
             'paid_through_at' => now()->addMonth(),
