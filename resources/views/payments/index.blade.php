@@ -43,11 +43,66 @@
         @endif
     </div>
 
+    @php
+        $monthlySubscription = \App\Models\CompanySubscription::query()
+            ->where('company_id', $company->id)
+            ->first();
+
+        $monthlyActive = app(\App\Services\SubscriptionEntitlementService::class)
+            ->hasPaidCoverage($company);
+
+        $liveMonthlyConfigured =
+            str_starts_with((string) config('services.stripe.secret'), 'sk_live_')
+            && config('services.stripe.monthly_launch_enabled') === true
+            && filled(config('services.stripe.monthly_price_id'))
+            && filled(config('services.stripe.subscription_webhook_secret'));
+    @endphp
+
     <div class="card">
-        <div class="kicker">The two-dollar rule</div>
-        <div class="big-number">$2</div>
-        <p class="muted">Per successful integrated payment transaction.</p>
-        <p>No monthly software subscription for the core tools. Cash and checks can still be recorded manually later without a ContractorSpecialties fee.</p>
+        <div class="kicker">Choose how you pay</div>
+        <h2 style="margin:8px 0">Pay as You Go</h2>
+        <div class="big-number">$0/month</div>
+        <p>$2 per eligible integrated online payment, capped at $5 per estimate or project.</p>
+        <p class="muted">All core features included. Stripe's own payment processing fees are separate.</p>
+
+        <hr style="margin:24px 0">
+
+        <h2 style="margin:8px 0">Monthly</h2>
+        <div class="big-number">$12.95/month</div>
+        <p>All the same core features, without additional ContractorSpecialties transaction fees during paid coverage.</p>
+        <p class="muted">Stripe's own payment processing fees still apply.</p>
+
+        @if($monthlyActive)
+            <div class="status" style="margin:14px 0">
+                Monthly coverage active through
+                {{ $monthlySubscription->paid_through_at->format('M j, Y') }}.
+            </div>
+        @elseif($monthlySubscription?->stripe_subscription_id)
+            <p class="muted">
+                Monthly is not currently paid. Your core tools remain available on Pay as You Go.
+            </p>
+        @endif
+
+        @if($monthlySubscription?->stripe_customer_id)
+            <form method="POST" action="{{ route('payments.subscription.portal') }}">
+                @csrf
+                <button class="btn" type="submit">Manage monthly billing →</button>
+            </form>
+        @elseif($liveMonthlyConfigured)
+            <form method="POST" action="{{ route('payments.subscription.checkout') }}">
+                @csrf
+                <button class="btn btn-primary" type="submit">
+                    Start Monthly — $12.95/month →
+                </button>
+            </form>
+        @else
+            <p class="muted">Monthly signup will be available at launch.</p>
+        @endif
+
+        <p class="muted">
+            Canceling Monthly returns you to Pay as You Go after your paid period.
+            Your account, customers, estimates, and records stay intact.
+        </p>
     </div>
 </div>
 @endsection

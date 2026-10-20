@@ -3,6 +3,31 @@
 @section('title', 'Internal Admin — ContractorSpecialties')
 
 @section('content')
+
+<div class="card" style="margin-bottom:24px; border:2px solid #2563eb;">
+    <div class="kicker">Internal testing only</div>
+    <h2 style="margin:10px 0;">Stripe Monthly Subscription Test</h2>
+
+    <p>
+        Test the $12.95/month ContractorSpecialties subscription
+        using Stripe's sandbox. No real card will be charged.
+    </p>
+
+    <p class="muted">
+        This creates a test subscription for the company attached
+        to your administrator login. It does not affect other companies.
+    </p>
+
+    <form method="POST"
+          action="{{ route('admin.subscription-test.checkout') }}">
+        @csrf
+
+        <button class="btn btn-primary" type="submit">
+            Start $12.95 Test Subscription →
+        </button>
+    </form>
+</div>
+
 <div class="page-head">
     <div>
         <div class="kicker">Internal administration</div>

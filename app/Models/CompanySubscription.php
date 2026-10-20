@@ -11,6 +11,7 @@ class CompanySubscription extends Model
         'company_id',
         'stripe_customer_id',
         'stripe_subscription_id',
+        'pending_checkout_attempt_id',
         'pending_checkout_session_id',
         'pending_checkout_expires_at',
         'status',

@@ -28,6 +28,8 @@ return [
         'webhook_secret' => env('STRIPE_WEBHOOK_SECRET'),
         'application_fee_cents' => (int) env('STRIPE_APPLICATION_FEE_CENTS', 200),
         'monthly_price_id' => env('STRIPE_MONTHLY_PRICE_ID'),
+        'monthly_launch_enabled' => env('STRIPE_MONTHLY_LAUNCH_ENABLED', false),
+        'subscription_webhook_secret' => env('STRIPE_SUBSCRIPTION_WEBHOOK_SECRET'),
     ],
 
 ];

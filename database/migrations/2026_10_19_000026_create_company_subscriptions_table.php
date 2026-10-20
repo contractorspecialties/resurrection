@@ -18,6 +18,7 @@ return new class extends Migration
 
             $table->string('stripe_customer_id')->nullable()->unique();
             $table->string('stripe_subscription_id')->nullable()->unique();
+            $table->uuid('pending_checkout_attempt_id')->nullable()->unique();
             $table->string('pending_checkout_session_id')->nullable()->unique();
             $table->timestamp('pending_checkout_expires_at')->nullable();
 

@@ -46,6 +46,8 @@ class StripeSubscriptionEventService
                 $this->recordPaidCoverage($change);
             } elseif ($change['action'] === 'ended') {
                 $this->recordEndedSubscription($change);
+            } elseif ($change['action'] === 'updated') {
+                $this->recordUpdatedSubscription($change);
             }
 
             $record->update([
@@ -59,6 +61,33 @@ class StripeSubscriptionEventService
     {
         if ($event->type === 'invoice.paid') {
             return $this->verifiedPaidInvoice($event->data->object);
+        }
+
+        if ($event->type === 'customer.subscription.updated') {
+            $eventSubscription = $event->data->object;
+            $subscriptionId = $this->stripeId($eventSubscription->id ?? null);
+
+            if (! $subscriptionId) {
+                throw new RuntimeException('Updated subscription has no ID.');
+            }
+
+            // Retrieve current Stripe state rather than trusting an
+            // event snapshot that may arrive out of order.
+            $current = $this->stripeConnect->client()
+                ->subscriptions->retrieve($subscriptionId, []);
+
+            if ($current->id !== $subscriptionId) {
+                throw new RuntimeException('Updated subscription ID mismatch.');
+            }
+
+            return [
+                'action' => 'updated',
+                'subscription_id' => $subscriptionId,
+                'customer_id' => $this->stripeId($current->customer ?? null),
+                'company_id' => $current->metadata->company_id ?? null,
+                'cancel_at_period_end' =>
+                    (bool) ($current->cancel_at_period_end ?? false),
+            ];
         }
 
         if ($event->type === 'customer.subscription.deleted') {
@@ -163,32 +192,17 @@ class StripeSubscriptionEventService
 
         $paidThrough = null;
 
+        $verifier = app(SubscriptionInvoiceLineVerifier::class);
+
         foreach ($lineItems->data as $line) {
-            $lineItemId = $this->stripeId(
-                $line->parent->subscription_item_details->subscription_item
-                    ?? null
+            $end = $verifier->coverageEnd(
+                $line,
+                $matchingItemIds[0],
+                $expectedPrice,
+                time()
             );
 
-            $linePriceId = $this->stripeId(
-                $line->pricing->price_details->price
-                    ?? $line->price
-                    ?? null
-            );
-
-            if (
-                $lineItemId !== $matchingItemIds[0]
-                || $linePriceId !== $expectedPrice
-                || (int) ($line->quantity ?? 0) !== 1
-                || (int) ($line->amount ?? 0) <= 0
-                || ($line->currency ?? null) !== 'usd'
-                || ($line->parent->subscription_item_details->proration ?? false)
-            ) {
-                continue;
-            }
-
-            $end = (int) ($line->period->end ?? 0);
-
-            if ($end > time() && ($paidThrough === null || $end > $paidThrough)) {
+            if ($end !== null && ($paidThrough === null || $end > $paidThrough)) {
                 $paidThrough = $end;
             }
         }
@@ -260,10 +274,49 @@ class StripeSubscriptionEventService
                 'status' => $change['status'],
                 'price_cents' => 1295,
                 'currency' => 'usd',
-                'paid_through_at' => Carbon::createFromTimestamp($paidThrough),
+                'paid_through_at' => Carbon::createFromTimestampUTC($paidThrough)
+                    ->setTimezone(config('app.timezone')),
                 'cancel_at_period_end' => $change['cancel_at_period_end'],
             ]
         );
+    }
+
+    private function recordUpdatedSubscription(array $change): void
+    {
+        $record = CompanySubscription::query()
+            ->where('stripe_subscription_id', $change['subscription_id'])
+            ->lockForUpdate()
+            ->first();
+
+        // Updates never create coverage or new subscriptions.
+        if (! $record) {
+            return;
+        }
+
+        if (
+            ! ctype_digit((string) ($change['company_id'] ?? null))
+            || (int) $change['company_id'] !== (int) $record->company_id
+        ) {
+            throw new RuntimeException('Updated subscription company mismatch.');
+        }
+
+        if (
+            ! is_string($change['customer_id'] ?? null)
+            || $change['customer_id'] === ''
+            || $record->stripe_customer_id !== $change['customer_id']
+        ) {
+            throw new RuntimeException('Updated subscription customer mismatch.');
+        }
+
+        // A canceled or revoked subscription cannot be reactivated
+        // by a delayed update event.
+        if ($record->status === 'canceled' || $record->revoked_at) {
+            return;
+        }
+
+        $record->update([
+            'cancel_at_period_end' => $change['cancel_at_period_end'],
+        ]);
     }
 
     private function recordEndedSubscription(array $change): void

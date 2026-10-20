@@ -18,6 +18,8 @@ use App\Http\Controllers\PriceBookController;
 use App\Http\Controllers\QuickBillController;
 use App\Http\Controllers\RecurringServiceController;
 use App\Http\Controllers\StripeWebhookController;
+use App\Http\Controllers\StripeSubscriptionWebhookController;
+use App\Http\Controllers\SubscriptionBillingController;
 use App\Http\Middleware\EnsureOnboardingCompleted;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdminController;
@@ -27,6 +29,9 @@ Route::middleware(['auth', EnsureInternalAdmin::class])
     ->prefix('admin')
     ->name('admin.')
     ->group(function () {
+        Route::post('/subscription-test/checkout', [SubscriptionBillingController::class, 'checkout'])
+            ->name('subscription-test.checkout');
+
         Route::get('/', [AdminController::class, 'index'])
             ->name('index');
 
@@ -117,6 +122,9 @@ Route::get('/quick-pay/{token}/return', [PortalPaymentController::class, 'quickB
 
 Route::post('/webhooks/stripe', StripeWebhookController::class)
     ->name('webhooks.stripe');
+
+Route::post('/webhooks/stripe-subscriptions', StripeSubscriptionWebhookController::class)
+    ->name('webhooks.stripe-subscriptions');
 
 
 /*
@@ -353,6 +361,12 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/payments', [PaymentSettingsController::class, 'index'])
             ->name('payments.index');
+
+        Route::post('/payments/subscription/checkout', [SubscriptionBillingController::class, 'checkout'])
+            ->name('payments.subscription.checkout');
+
+        Route::post('/payments/subscription/portal', [SubscriptionBillingController::class, 'portal'])
+            ->name('payments.subscription.portal');
 
         Route::post('/payments/stripe/connect', [PaymentSettingsController::class, 'connect'])
             ->name('payments.stripe.connect');

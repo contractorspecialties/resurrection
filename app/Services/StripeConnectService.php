@@ -233,10 +233,7 @@ class StripeConnectService
                 company: $quickBill->company,
                 clientEmail: $quickBill->client->email,
                 amountCents: $amountDue,
-                feeCents: min(
-                    self::NORMAL_FEE_CENTS,
-                    max(0, $amountDue - 1)
-                ),
+                feeCents: $this->quickBillFeeCents($quickBill, $amountDue),
                 purpose: 'quick_bill',
                 description: "{$quickBill->quick_bill_number}: {$quickBill->description}",
                 successUrl: route(
@@ -406,11 +403,24 @@ class StripeConnectService
 
         $remainingCap = max(0, self::PROJECT_FEE_CAP_CENTS - $alreadyCollected);
 
-        return min(
-            self::NORMAL_FEE_CENTS,
-            $remainingCap,
-            max(0, $amountCents - 1)
-        );
+        return app(SubscriptionEntitlementService::class)
+            ->platformFeeCents(
+                $estimate->company,
+                min(
+                    self::NORMAL_FEE_CENTS,
+                    $remainingCap,
+                    max(0, $amountCents - 1)
+                )
+            );
+    }
+
+    private function quickBillFeeCents(QuickBill $quickBill, int $amountCents): int
+    {
+        return app(SubscriptionEntitlementService::class)
+            ->platformFeeCents(
+                $quickBill->company,
+                min(self::NORMAL_FEE_CENTS, max(0, $amountCents - 1))
+            );
     }
 
     private function createCheckout(
