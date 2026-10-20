@@ -65,6 +65,26 @@
         .section p.intro{font-size:1.2rem;color:var(--muted);max-width:720px;margin:0 0 36px}
         .cards{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
         .card{padding:28px;border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:0 8px 30px rgba(18,35,58,.04)}
+        .feature-icon{
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            width:48px;
+            height:48px;
+            border-radius:12px;
+            background:#fff3e9;
+            color:var(--orange);
+            margin-bottom:18px;
+        }
+        .feature-icon svg{
+            width:25px;
+            height:25px;
+            fill:none;
+            stroke:currentColor;
+            stroke-width:1.8;
+            stroke-linecap:round;
+            stroke-linejoin:round;
+        }
         .card .kicker{color:var(--orange);font-weight:900;text-transform:uppercase;font-size:.75rem;letter-spacing:.12em}
         .card h3{font-size:1.35rem;margin:8px 0 10px}
         .card p{color:var(--muted);line-height:1.55;margin:0}
@@ -172,9 +192,61 @@
             <h2>Run the business without becoming a software guy.</h2>
             <p class="intro">ContractorSpecialties handles the business chores around the job so you can spend more time doing work customers will actually pay for.</p>
             <div class="cards">
-                <article class="card"><div class="kicker">Price the job</div><h3>Professional estimates</h3><p>Build clear estimates, send them by email or text, revise them without losing history, and give the customer one place to approve the work.</p></article>
-                <article class="card"><div class="kicker">Get the money</div><h3>Payments that make sense</h3><p>Collect deposits and balances online, record cash or checks, and always know what was paid and what is still owed.</p></article>
-                <article class="card"><div class="kicker">While you're here…</div><h3>Quick Bill</h3><p>Customer asks for one more little job? Price it, collect it, then do it. No tiny accounts-receivable problem required.</p></article>
+                <article class="card"><div class="kicker">Keep your people straight</div><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false">
+        <circle cx="9" cy="8" r="3"/>
+        <path d="M3 20v-2a6 6 0 0 1 12 0v2"/>
+        <path d="M17 5a3 3 0 0 1 0 6M17 15a5 5 0 0 1 4 5"/>
+    </svg></span><h3>Customer Management</h3><p>Save customer details, find past work, and keep the information you need in one place.</p></article>
+                <article class="card"><div class="kicker">Price the work</div><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false">
+        <rect x="5" y="4" width="14" height="17" rx="2"/>
+        <path d="M9 4V2h6v2M9 10h6M9 14h6M9 18h3"/>
+    </svg></span><h3>Professional Estimates</h3><p>Build itemized estimates with prices, taxes, and deposits. Make changes without losing track of the job.</p></article>
+                <article class="card"><div class="kicker">Stop pricing it twice</div><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false">
+        <path d="M4 5a2 2 0 0 1 2-2h14v17H6a2 2 0 0 0-2 2z"/>
+        <path d="M4 5v17M9 8h7M9 12h5"/>
+    </svg></span><h3>Price Book</h3><p>Save your common services and prices so you don't have to enter the same work over and over.</p></article>
+                <article class="card"><div class="kicker">Get the go-ahead</div><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false">
+        <path d="M8 3h8l3 3v15H5V3h3"/>
+        <path d="m8 13 3 3 5-6"/>
+    </svg></span><h3>Customer Approval</h3><p>Give customers a secure link to review the work, request changes, and approve the estimate.</p></article>
+                <article class="card"><div class="kicker">Know what's next</div><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false">
+        <rect x="3" y="5" width="18" height="16" rx="2"/>
+        <path d="M7 3v4M17 3v4M3 10h18"/>
+        <path d="m8 16 2 2 5-5"/>
+    </svg></span><h3>Jobs & Scheduling</h3><p>Track approved work, set job dates, and see what's been paid and what's still owed.</p></article>
+                <article class="card"><div class="kicker">Get what you're owed</div><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false">
+        <rect x="3" y="5" width="18" height="14" rx="2"/>
+        <path d="M3 10h18M7 15h4"/>
+        <circle cx="17" cy="15" r="1"/>
+    </svg></span><h3>Deposits & Final Balances</h3><p>Collect deposits and final payments without guessing which jobs still have money outstanding.</p></article>
+                <article class="card"><div class="kicker">While you're here…</div><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false">
+        <path d="m13 2-9 12h7l-1 8 10-13h-7z"/>
+    </svg></span><h3>Quick Bill</h3><p>Customer wants one more little job? Price it, collect payment, then get to work.</p></article>
+                <article class="card"><div class="kicker">Get paid online</div><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false">
+        <rect x="2" y="5" width="20" height="14" rx="2"/>
+        <path d="M2 10h20M6 15h4"/>
+    </svg></span><h3>Secure Stripe Payments</h3><p>Let customers pay online through Stripe after you've connected your payment account.</p></article>
+                <article class="card"><div class="kicker">Cash still counts</div><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false">
+        <rect x="3" y="4" width="18" height="16" rx="2"/>
+        <path d="M7 9h10M7 13h5M7 17h3"/>
+        <path d="m15 16 2 2 3-4"/>
+    </svg></span><h3>Cash & Check Records</h3><p>Record payments made outside the app and keep your balances accurate.</p></article>
+                <article class="card"><div class="kicker">Same job, different week</div><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false">
+        <path d="M20 11a8 8 0 0 0-14-5L4 8"/>
+        <path d="M4 3v5h5"/>
+        <path d="M4 13a8 8 0 0 0 14 5l2-2"/>
+        <path d="M20 21v-5h-5"/>
+    </svg></span><h3>Recurring Services</h3><p>Set up repeat service work and generate bills when they're due.</p></article>
+                <article class="card"><div class="kicker">Keep in touch</div><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false">
+        <path d="M3 5h18v12H8l-5 4z"/>
+        <path d="m5 8 7 5 7-5"/>
+    </svg></span><h3>Email & Text Messaging</h3><p>Send customer messages and estimate links. Text messaging requires an eligible connected payment account.</p></article>
+                <article class="card"><div class="kicker">See what needs doing</div><span class="feature-icon" aria-hidden="true"><svg viewBox="0 0 24 24" focusable="false">
+        <rect x="3" y="3" width="18" height="18" rx="2"/>
+        <path d="M3 10h18M10 10v11"/>
+        <circle cx="16" cy="16" r="2"/>
+        <path d="M16 13v1"/>
+    </svg></span><h3>Dashboard & Reminders</h3><p>Keep an eye on work needing attention, unpaid Quick Bills, and upcoming job reminders.</p></article>
             </div>
         </div>
     </section>
