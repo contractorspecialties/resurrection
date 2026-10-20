@@ -79,8 +79,26 @@ class SubscriptionEnvironmentBoundaryTest extends TestCase
         $this->subscription($company, true);
 
         $this->assertSame(200, $this->fee($company, ''));
-        $this->assertSame(200, $this->fee($company, 'rk_live_boundary'));
+        $this->assertSame(0, $this->fee($company, 'rk_live_boundary'));
         $this->assertSame(200, $this->fee($company, 'unknown'));
+    }
+
+    public function test_restricted_test_key_never_waives_live_subscription_fees(): void
+    {
+        $company = $this->company();
+        $this->subscription($company, true);
+
+        $this->assertSame(200, $this->fee($company, 'rk_test_boundary'));
+        $this->assertSame(0, $this->fee($company, 'rk_live_boundary'));
+    }
+
+    public function test_restricted_live_key_never_waives_test_subscription_fees(): void
+    {
+        $company = $this->company();
+        $this->subscription($company, false);
+
+        $this->assertSame(200, $this->fee($company, 'rk_live_boundary'));
+        $this->assertSame(0, $this->fee($company, 'rk_test_boundary'));
     }
 
     public function test_canceled_paid_coverage_still_respects_environment(): void

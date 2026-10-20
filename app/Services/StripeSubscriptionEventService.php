@@ -138,9 +138,9 @@ class StripeSubscriptionEventService
 
         $key = (string) config('services.stripe.secret');
 
-        $expectedLive = str_starts_with($key, 'sk_live_')
+        $expectedLive = (str_starts_with($key, 'sk_live_') || str_starts_with($key, 'rk_live_'))
             ? true
-            : (str_starts_with($key, 'sk_test_') ? false : null);
+            : ((str_starts_with($key, 'sk_test_') || str_starts_with($key, 'rk_test_')) ? false : null);
 
         if (
             $expectedLive === null

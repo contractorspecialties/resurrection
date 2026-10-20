@@ -22,12 +22,12 @@ class SubscriptionBillingController extends Controller
         abort_unless(
             (
                 (
-                    str_starts_with((string) config('services.stripe.secret'), 'sk_live_')
+                    (str_starts_with((string) config('services.stripe.secret'), 'sk_live_') || str_starts_with((string) config('services.stripe.secret'), 'rk_live_'))
                     && config('services.stripe.monthly_launch_enabled') === true
                 )
                 || (
                     $request->user()->is_internal_admin
-                    && str_starts_with((string) config('services.stripe.secret'), 'sk_test_')
+                    && (str_starts_with((string) config('services.stripe.secret'), 'sk_test_') || str_starts_with((string) config('services.stripe.secret'), 'rk_test_'))
                 )
             )
             && filled(config('services.stripe.subscription_webhook_secret')),
@@ -42,8 +42,8 @@ class SubscriptionBillingController extends Controller
         $price = $stripe->prices->retrieve($priceId, []);
 
         $key = (string) config('services.stripe.secret');
-        $test = str_starts_with($key, 'sk_test_');
-        $live = str_starts_with($key, 'sk_live_');
+        $test = (str_starts_with($key, 'sk_test_') || str_starts_with($key, 'rk_test_'));
+        $live = (str_starts_with($key, 'sk_live_') || str_starts_with($key, 'rk_live_'));
 
         abort_unless(
             ($test || $live)
@@ -254,9 +254,9 @@ class SubscriptionBillingController extends Controller
         );
 
         $key = (string) config('services.stripe.secret');
-        $live = str_starts_with($key, 'sk_live_')
+        $live = (str_starts_with($key, 'sk_live_') || str_starts_with($key, 'rk_live_'))
             ? true
-            : (str_starts_with($key, 'sk_test_') ? false : null);
+            : ((str_starts_with($key, 'sk_test_') || str_starts_with($key, 'rk_test_')) ? false : null);
 
         abort_unless(
             $live !== null

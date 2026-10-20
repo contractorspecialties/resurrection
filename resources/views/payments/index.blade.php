@@ -52,9 +52,9 @@
             ->hasPaidCoverage($company);
 
         $stripeKey = (string) config('services.stripe.secret');
-        $currentLiveMode = str_starts_with($stripeKey, 'sk_live_')
+        $currentLiveMode = (str_starts_with($stripeKey, 'sk_live_') || str_starts_with($stripeKey, 'rk_live_'))
             ? true
-            : (str_starts_with($stripeKey, 'sk_test_') ? false : null);
+            : ((str_starts_with($stripeKey, 'sk_test_') || str_starts_with($stripeKey, 'rk_test_')) ? false : null);
 
         $hasBillingIdentity = filled($monthlySubscription?->stripe_customer_id)
             || filled($monthlySubscription?->stripe_subscription_id)
@@ -69,7 +69,7 @@
             && ! $billingEnvironmentMatches;
 
         $liveMonthlyConfigured =
-            str_starts_with((string) config('services.stripe.secret'), 'sk_live_')
+            (str_starts_with((string) config('services.stripe.secret'), 'sk_live_') || str_starts_with((string) config('services.stripe.secret'), 'rk_live_'))
             && config('services.stripe.monthly_launch_enabled') === true
             && filled(config('services.stripe.monthly_price_id'))
             && filled(config('services.stripe.subscription_webhook_secret'));

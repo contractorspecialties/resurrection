@@ -60,6 +60,28 @@ class SubscriptionCheckoutAccessTest extends TestCase
             ->assertStatus(503);
     }
 
+    public function test_restricted_live_key_respects_disabled_launch(): void
+    {
+        config()->set('services.stripe.secret', 'rk_live_dummy');
+        config()->set('services.stripe.monthly_launch_enabled', false);
+        config()->set('services.stripe.subscription_webhook_secret', 'whsec_dummy');
+
+        $this->actingAs($this->contractor())
+            ->post(route('payments.subscription.checkout'))
+            ->assertStatus(503);
+    }
+
+    public function test_restricted_test_key_does_not_allow_public_checkout(): void
+    {
+        config()->set('services.stripe.secret', 'rk_test_dummy');
+        config()->set('services.stripe.monthly_launch_enabled', true);
+        config()->set('services.stripe.subscription_webhook_secret', 'whsec_dummy');
+
+        $this->actingAs($this->contractor())
+            ->post(route('payments.subscription.checkout'))
+            ->assertStatus(503);
+    }
+
     public function test_guest_cannot_open_billing_portal(): void
     {
         $this->post(route('payments.subscription.portal'))

@@ -11,9 +11,9 @@ class SubscriptionEntitlementService
     {
         $key = (string) config('services.stripe.secret');
 
-        if (str_starts_with($key, 'sk_live_')) {
+        if ((str_starts_with($key, 'sk_live_') || str_starts_with($key, 'rk_live_'))) {
             $liveMode = true;
-        } elseif (str_starts_with($key, 'sk_test_')) {
+        } elseif ((str_starts_with($key, 'sk_test_') || str_starts_with($key, 'rk_test_'))) {
             $liveMode = false;
         } else {
             // Unknown Stripe environment never waives platform fees.
