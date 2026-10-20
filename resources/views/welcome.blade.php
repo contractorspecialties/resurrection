@@ -148,7 +148,7 @@
 
                 <div class="hero-cta" id="get-started">
                     <a class="btn btn-primary" href="{{ Route::has('register') ? route('register') : '#features' }}">Get Started Free →</a>
-                    <span class="subnote">No subscription. No credit card required.</span>
+                    <span class="subnote">No required subscription. No credit card to get started.</span>
                 </div>
             </div>
             <div class="hero-visual">
@@ -160,7 +160,7 @@
     <section class="value-strip" aria-label="Why ContractorSpecialties">
         <div class="container value-grid">
             <div class="value"><div class="value-icon">👥</div><div><strong>Built for real contractors</strong><span>No corporate fluff. Just useful tools.</span></div></div>
-            <div class="value"><div class="value-icon">🛡️</div><div><strong>Free core tools</strong><span>No subscription. Ever.</span></div></div>
+            <div class="value"><div class="value-icon">🛡️</div><div><strong>Free core tools</strong><span>No monthly fee required.</span></div></div>
             <div class="value"><div class="value-icon">💳</div><div><strong>Get paid faster</strong><span>Integrated online payments.</span></div></div>
             <div class="value"><div class="value-icon">📈</div><div><strong>Grow your business</strong><span>Look professional. Win more work.</span></div></div>
         </div>
@@ -194,8 +194,23 @@
     <section class="section" id="pricing">
         <div class="container">
             <div class="eyebrow">The two-dollar business model</div>
-            <h2>Free software. We make money when you make money.</h2>
-            <p class="intro">No monthly software subscription for the core tools. When an integrated online payment helps you get paid, ContractorSpecialties earns $2. Cash and checks can still be recorded manually.</p>
+            <h2>Start free. Pay as you go. Or tell us to stop taking your two bucks.</h2>
+            <p class="intro">All the core tools are free. Stay on Pay as You Go and ContractorSpecialties earns $2 per eligible integrated online payment, capped at $5 per estimate or project. You can still record cash and checks manually.</p>
+            <div class="cards">
+                <article class="card">
+                    <div class="kicker">Pay as You Go</div>
+                    <h3>$0 a month</h3>
+                    <p>Use the tools without a monthly bill. When you collect an eligible online payment, we earn our transaction fee. Stripe's payment processing fees are separate.</p>
+                </article>
+                <article class="card">
+                    <div class="kicker">A little too successful?</div>
+                    <h3>Been giving us too much money?</h3>
+                    <p>That's exactly the kind of BS that made us write this software in the first place. So, how's this sound?</p>
+                    <p><strong>$12.95 a month.</strong> Same tools, same features, and no additional ContractorSpecialties transaction fees while your subscription is paid. Standard Stripe processing fees still apply.</p>
+                    <p><strong>Your business. Your money. Your call.</strong></p>
+                    <p><strong>Monthly signup opens at launch.</strong> Until then, Pay as You Go is available without a subscription.</p>
+                </article>
+            </div>
         </div>
     </section>
 
