@@ -51,6 +51,23 @@
         $monthlyActive = app(\App\Services\SubscriptionEntitlementService::class)
             ->hasPaidCoverage($company);
 
+        $stripeKey = (string) config('services.stripe.secret');
+        $currentLiveMode = str_starts_with($stripeKey, 'sk_live_')
+            ? true
+            : (str_starts_with($stripeKey, 'sk_test_') ? false : null);
+
+        $hasBillingIdentity = filled($monthlySubscription?->stripe_customer_id)
+            || filled($monthlySubscription?->stripe_subscription_id)
+            || filled($monthlySubscription?->pending_checkout_attempt_id)
+            || filled($monthlySubscription?->pending_checkout_session_id);
+
+        $billingEnvironmentMatches = $currentLiveMode !== null
+            && $monthlySubscription?->stripe_livemode !== null
+            && $monthlySubscription->stripe_livemode === $currentLiveMode;
+
+        $billingNeedsReconciliation = $hasBillingIdentity
+            && ! $billingEnvironmentMatches;
+
         $liveMonthlyConfigured =
             str_starts_with((string) config('services.stripe.secret'), 'sk_live_')
             && config('services.stripe.monthly_launch_enabled') === true
@@ -77,18 +94,30 @@
                 Monthly coverage active through
                 {{ $monthlySubscription->paid_through_at->format('M j, Y') }}.
             </div>
+        @elseif($billingNeedsReconciliation)
+            <p class="muted">
+                This account has a billing record from a different or unverified
+                Stripe environment. Monthly billing requires support review.
+                Your core tools remain available.
+            </p>
         @elseif($monthlySubscription?->stripe_subscription_id)
             <p class="muted">
-                Monthly is not currently paid. Your core tools remain available on Pay as You Go.
+                Monthly coverage is not currently active. Your core tools
+                remain available on Pay as You Go.
             </p>
         @endif
 
-        @if($monthlySubscription?->stripe_customer_id)
+        @if($billingNeedsReconciliation)
+            <p class="muted">
+                Monthly billing management and signup are temporarily
+                unavailable for this account. Please contact support.
+            </p>
+        @elseif($monthlySubscription?->stripe_customer_id && $billingEnvironmentMatches)
             <form method="POST" action="{{ route('payments.subscription.portal') }}">
                 @csrf
                 <button class="btn" type="submit">Manage monthly billing →</button>
             </form>
-        @elseif($liveMonthlyConfigured)
+        @elseif($liveMonthlyConfigured && ! $hasBillingIdentity)
             <form method="POST" action="{{ route('payments.subscription.checkout') }}">
                 @csrf
                 <button class="btn btn-primary" type="submit">
