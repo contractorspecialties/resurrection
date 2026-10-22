@@ -12,7 +12,6 @@ use Stripe\StripeClient;
 
 class StripeConnectService
 {
-    private const ACCOUNTS_V2_VERSION = '2026-08-26.preview';
     private const NORMAL_FEE_CENTS = 200;
     private const PROJECT_FEE_CAP_CENTS = 500;
 
@@ -27,62 +26,130 @@ class StripeConnectService
 
     public function createOrRefreshConnectedAccount(Company $company, string $email): Company
     {
-        if (! $company->stripe_account_id) {
-            $response = Http::withToken(config('services.stripe.secret'))
-                ->withHeaders([
-                    'Stripe-Version' => self::ACCOUNTS_V2_VERSION,
-                    'Content-Type' => 'application/json',
-                ])
-                ->post('https://api.stripe.com/v2/core/accounts', [
-                    'contact_email' => $email,
-                    'display_name' => $company->name,
-                    'identity' => [
-                        'country' => 'us',
-                        'entity_type' => 'company',
-                        'business_details' => [
-                            'registered_name' => $company->name,
-                        ],
-                    ],
-                    'dashboard' => 'full',
-                    'configuration' => [
-                        'merchant' => [
-                            'capabilities' => [
-                                'card_payments' => ['requested' => true],
-                            ],
-                        ],
-                    ],
-                    'defaults' => [
-                        'currency' => 'usd',
-                        'responsibilities' => [
-                            'fees_collector' => 'stripe',
-                            'losses_collector' => 'stripe',
-                        ],
-                        'locales' => ['en-US'],
-                    ],
-                    'include' => [
-                        'configuration.merchant',
-                        'requirements',
-                    ],
-                ]);
+        /*
+         * Reserve one durable creation attempt before making any
+         * external Stripe request. Never hold a database transaction
+         * open during the Stripe API call.
+         */
+        $requestUuid = DB::transaction(function () use ($company): ?string {
+            $locked = Company::query()
+                ->lockForUpdate()
+                ->findOrFail($company->id);
 
-            if (! $response->successful()) {
-                abort($response->status(), 'Stripe account creation failed: '.$response->body());
+            if (filled($locked->stripe_account_id)) {
+                return null;
             }
 
-            $accountId = data_get($response->json(), 'id');
+            $existing = DB::table('stripe_connect_attempts')
+                ->where('company_id', $locked->id)
+                ->first();
 
-            abort_unless(
-                filled($accountId),
-                500,
-                'Stripe created an account but returned no account ID.'
-            );
+            if ($existing) {
+                abort(
+                    409,
+                    'Stripe setup was already started for this company. '
+                    .'Please contact support if setup did not finish.'
+                );
+            }
 
-            $company->update([
-                'stripe_account_id' => $accountId,
+            $uuid = (string) \Illuminate\Support\Str::uuid();
+
+            DB::table('stripe_connect_attempts')->insert([
+                'company_id' => $locked->id,
+                'request_uuid' => $uuid,
+                'status' => 'pending',
+                'created_at' => now(),
+                'updated_at' => now(),
             ]);
+
+            return $uuid;
+        });
+
+        /*
+         * Another request might have already completed creation.
+         * In that case, only refresh the existing account.
+         */
+        if ($requestUuid === null) {
+            return $this->refreshAccountStatus($company->refresh());
         }
 
-        return $this->refreshAccountStatus($company);
+        try {
+            $account = $this->client()->accounts->create([
+                'type' => 'standard',
+                'country' => 'US',
+                'email' => $email,
+                'metadata' => [
+                    'cs_company_id' => (string) $company->id,
+                    'cs_request_uuid' => $requestUuid,
+                ],
+            ], [
+                'idempotency_key' => 'cs-connect-'.$requestUuid,
+            ]);
+        } catch (\Throwable $e) {
+            /*
+             * A failed Stripe request may have an uncertain outcome.
+             * Preserve the pending attempt for reconciliation.
+             */
+            report($e);
+
+            abort(
+                503,
+                'Stripe setup could not be completed. '
+                .'Please contact support before trying again.'
+            );
+        }
+
+        $accountId = (string) ($account->id ?? '');
+
+        if (! preg_match('/^acct_[A-Za-z0-9]+$/', $accountId)) {
+            report(new \RuntimeException(
+                'Stripe Connect returned an invalid account identifier.'
+            ));
+
+            abort(
+                503,
+                'Stripe setup needs assistance. Please contact support.'
+            );
+        }
+
+        /*
+         * Save the account ID and mark the attempt completed in
+         * the same database transaction. If this fails, the pending
+         * attempt remains as a reconciliation safeguard.
+         */
+        DB::transaction(function () use ($company, $requestUuid, $accountId): void {
+            $locked = Company::query()
+                ->lockForUpdate()
+                ->findOrFail($company->id);
+
+            $attempt = DB::table('stripe_connect_attempts')
+                ->where('company_id', $locked->id)
+                ->lockForUpdate()
+                ->first();
+
+            if (! $attempt
+                || $attempt->request_uuid !== $requestUuid
+                || $attempt->status !== 'pending'
+                || filled($locked->stripe_account_id)) {
+                throw new \RuntimeException(
+                    'Stripe Connect attempt state requires reconciliation.'
+                );
+            }
+
+            $locked->update([
+                'stripe_account_id' => $accountId,
+            ]);
+
+            DB::table('stripe_connect_attempts')
+                ->where('id', $attempt->id)
+                ->update([
+                    'stripe_account_id' => $accountId,
+                    'status' => 'completed',
+                    'updated_at' => now(),
+                ]);
+        });
+
+        return $this->refreshAccountStatus($company->refresh());
     }
 
     public function refreshAccountStatus(Company $company): Company
