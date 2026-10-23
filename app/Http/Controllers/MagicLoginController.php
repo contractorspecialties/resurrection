@@ -53,11 +53,14 @@ class MagicLoginController extends Controller
             );
 
             try {
-                Mail::raw(
-                    "Use this link to sign in to ContractorSpecialties:\n\n"
-                    .route('magic-login.confirm', ['token' => $token])
-                    ."\n\nThis link expires in 15 minutes and works only once.\n"
-                    ."If you didn't request it, ignore this email.",
+                Mail::send(
+                    [
+                        'html' => 'emails.magic-login',
+                        'text' => 'emails.magic-login-text',
+                    ],
+                    [
+                        'loginUrl' => route('magic-login.confirm', ['token' => $token]),
+                    ],
                     function ($message) use ($email) {
                         $message->to($email)
                             ->subject('Your ContractorSpecialties sign-in link');
