@@ -14,10 +14,6 @@
     </div>
 
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-        @if(in_array($estimate->status, ['draft', 'revision_requested'], true))
-            <a class="btn btn-secondary" href="{{ route('estimates.edit', $estimate) }}">{{ $estimate->status === 'revision_requested' ? 'Revise Estimate' : 'Edit' }}</a>
-        @endif
-
         @if($estimate->status === 'draft')
             <form method="POST" action="{{ route('estimates.mark-sent', $estimate) }}">
                 @csrf
@@ -68,8 +64,18 @@
                 >
             </div>
 
+            <div class="field" style="margin:0;min-width:180px">
+                <label for="job_start_time">Start time (optional)</label>
+                <input
+                    id="job_start_time"
+                    name="job_start_time"
+                    type="time"
+                    value="{{ old('job_start_time', $estimate->job_start_time ? substr($estimate->job_start_time, 0, 5) : '') }}"
+                >
+            </div>
+
             <button class="btn btn-secondary" type="submit">
-                Save Job Date
+                Save Schedule
             </button>
         </div>
 
@@ -160,4 +166,43 @@
     @endforeach
 </div>
 @endif
+
+<div style="margin:36px 0 16px;padding-top:20px;border-top:1px solid #dce3eb">
+    <div style="font-size:.8rem;font-weight:700;color:#64748b;margin-bottom:10px">
+        ESTIMATE MANAGEMENT
+    </div>
+        @if(in_array($estimate->status, ['draft', 'revision_requested'], true))
+            <a class="btn btn-secondary" href="{{ route('estimates.edit', $estimate) }}">{{ $estimate->status === 'revision_requested' ? 'Revise Estimate' : 'Edit' }}</a>
+        @endif
+
+        @if(in_array($estimate->status, [
+            'draft', 'sent', 'revision_requested'
+        ], true))
+            <div style="margin:12px 0;padding:12px;border-left:3px solid #d97706;background:#fff8ed;border-radius:6px;font-size:.9rem">
+                <strong>Canceling work does not refund payments.</strong>
+                <p style="margin:6px 0">
+                    Deposits and payments already received remain in the payment history.
+                    Discuss any refund with your customer and handle it separately.
+                </p>
+                <a href="https://support.stripe.com/questions/how-do-i-issue-refunds"
+                   target="_blank"
+                   rel="noopener noreferrer">
+                    How to issue a refund through Stripe ↗
+                </a>
+            </div>
+            <form method="POST"
+                  action="{{ route('estimates.cancel', $estimate) }}"
+                  onsubmit="return confirm('Cancel this estimate or job? This will stop scheduling and new collections. Existing payments will NOT be refunded.');">
+                @csrf
+                <button class="btn btn-secondary"
+                        type="submit"
+                        style="border-color:#b42318;color:#b42318">
+                    Cancel {{ in_array($estimate->status, ['active_job','balance_due','paid'], true) ? 'Job' : 'Estimate' }}
+                </button>
+            </form>
+        @endif
+
+
+</div>
+
 @endsection

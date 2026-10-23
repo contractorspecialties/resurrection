@@ -53,13 +53,13 @@ class RecurringServiceController extends Controller {
         $d=$request->validate([
             'client_id'=>['required','integer'],'price_book_item_id'=>['nullable','integer'],'name'=>['required','string','max:180'],'description'=>['nullable','string','max:2000'],
             'amount'=>['required','numeric','gt:0','max:99999999'],'frequency'=>['required',Rule::in(['weekly','biweekly','monthly','quarterly','annually'])],
-            'next_bill_on'=>['required','date'],'auto_send_email'=>['nullable','boolean'],'is_active'=>['nullable','boolean'],
+            'next_bill_on'=>['required','date'],'next_visit_on'=>['nullable','date'],'visit_start_time'=>['nullable','date_format:H:i'],'auto_send_email'=>['nullable','boolean'],'is_active'=>['nullable','boolean'],
         ]);
         Client::query()->where('company_id',$request->user()->company_id)->whereNull('archived_at')->findOrFail($d['client_id']);
         if(filled($d['price_book_item_id']??null)) PriceBookItem::query()->where('company_id',$request->user()->company_id)->findOrFail($d['price_book_item_id']);
         return ['client_id'=>(int)$d['client_id'],'price_book_item_id'=>filled($d['price_book_item_id']??null)?(int)$d['price_book_item_id']:null,
             'name'=>trim($d['name']),'description'=>filled($d['description']??null)?trim($d['description']):null,'amount_cents'=>(int)round(((float)$d['amount'])*100),
-            'frequency'=>$d['frequency'],'next_bill_on'=>$d['next_bill_on'],'auto_send_email'=>$request->boolean('auto_send_email'),'is_active'=>$request->boolean('is_active')];
+            'frequency'=>$d['frequency'],'next_bill_on'=>$d['next_bill_on'],'next_visit_on'=>$d['next_visit_on']??null,'visit_start_time'=>!empty($d['next_visit_on']) ? ($d['visit_start_time']??null) : null,'auto_send_email'=>$request->boolean('auto_send_email'),'is_active'=>$request->boolean('is_active')];
     }
     private function authorizeCompany(Request $request, RecurringService $service): void { abort_unless($service->company_id===$request->user()->company_id,404); }
 }

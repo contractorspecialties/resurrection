@@ -530,6 +530,48 @@
             main{padding-top:28px}
         }
     </style>
+
+<style id="cs-nav-icons-launch-v1">
+@media (min-width:851px) {
+    .desktop-nav .nav-link,
+    .desktop-nav .menu-trigger {
+        display:inline-flex;
+        align-items:center;
+        justify-content:center;
+        gap:8px;
+    }
+    .desktop-nav .cs-nav-icon {
+        display:inline-block;
+        width:18px;
+        height:18px;
+        flex:0 0 18px;
+    }
+    .desktop-logout .cs-profile-logout {
+        display:grid;
+        place-items:center;
+        width:44px;
+        height:44px;
+        padding:9px;
+        border:1px solid #e0e5ec;
+        border-radius:50%;
+        background:#eef1f5;
+        color:#263d58;
+    }
+    .desktop-logout .cs-profile-logout .cs-nav-icon {
+        width:23px;
+        height:23px;
+    }
+    .desktop-logout .cs-profile-logout:hover {
+        background:#fff0e5;
+        border-color:#dc651e;
+    }
+    .desktop-logout .cs-profile-logout:focus-visible {
+        outline:3px solid #ef9a63;
+        outline-offset:2px;
+    }
+}
+</style>
+
 </head>
 <body>
 
@@ -546,12 +588,12 @@
                         class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}"
                         href="{{ route('dashboard') }}"
                     >
-                        Dashboard
+                        <svg class="cs-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 10 9-7 9 7v11h-7v-7h-4v7H3z"/></svg> Dashboard
                     </a>
 
                     <div class="menu">
                         <button class="menu-trigger" type="button" aria-expanded="false">
-                            Work <span class="chevron">⌄</span>
+                            <svg class="cs-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3h8l4 4v14H4V3zM8 3v5h8M8 13h8M8 17h6"/></svg> Work <span class="chevron">⌄</span>
                         </button>
 
                         <div class="mega-menu">
@@ -587,7 +629,7 @@
 
                     <div class="menu">
                         <button class="menu-trigger" type="button" aria-expanded="false">
-                            Tools <span class="chevron">⌄</span>
+                            <svg class="cs-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 3h4l1 3 3 1 3-1 2 4-2 2v3l2 2-2 4-3-1-3 1-1 3h-4l-1-3-3-1-3 1-2-4 2-2v-3l-2-2 2-4 3 1 3-1z"/><circle cx="12" cy="13" r="3"/></svg> Tools <span class="chevron">⌄</span>
                         </button>
 
                         <div class="mega-menu tools">
@@ -627,7 +669,7 @@
 
                     <form class="desktop-logout" method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button class="logout-btn" type="submit">Log Out</button>
+                        <button class="logout-btn cs-profile-logout" type="submit" aria-label="Log out" title="Log out"><svg class="cs-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
                     </form>
 
                     <button class="mobile-toggle" type="button" aria-label="Open navigation" aria-expanded="false">
@@ -809,5 +851,10 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 </script>
 
+
+<div class="cs-legal-footer" style="text-align:center;padding:16px 12px;font-size:12px">
+    <a href="/privacy/" style="margin:0 10px">Privacy Policy</a>
+    <a href="/terms/" style="margin:0 10px">Terms of Service</a>
+</div>
 </body>
 </html>

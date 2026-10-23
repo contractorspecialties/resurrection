@@ -264,6 +264,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/estimates/{estimate}/job-date', [EstimateController::class, 'setJobDate'])
             ->name('estimates.job-date');
 
+        Route::post('/estimates/{estimate}/cancel', [EstimateController::class, 'cancel'])
+            ->name('estimates.cancel');
+
 
         /*
         |--------------------------------------------------------------------------

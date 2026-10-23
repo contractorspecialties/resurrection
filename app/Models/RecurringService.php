@@ -4,8 +4,8 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class RecurringService extends Model {
-    protected $fillable=['company_id','client_id','price_book_item_id','name','description','amount_cents','frequency','next_bill_on','auto_send_email','is_active','last_generated_at'];
-    protected function casts(): array { return ['next_bill_on'=>'date','auto_send_email'=>'boolean','is_active'=>'boolean','last_generated_at'=>'datetime']; }
+    protected $fillable=['company_id','client_id','price_book_item_id','name','description','amount_cents','frequency','next_bill_on','next_visit_on','visit_start_time','auto_send_email','is_active','last_generated_at'];
+    protected function casts(): array { return ['next_bill_on'=>'date','next_visit_on'=>'date','auto_send_email'=>'boolean','is_active'=>'boolean','last_generated_at'=>'datetime']; }
     public function company(): BelongsTo { return $this->belongsTo(Company::class); }
     public function client(): BelongsTo { return $this->belongsTo(Client::class); }
     public function priceBookItem(): BelongsTo { return $this->belongsTo(PriceBookItem::class); }

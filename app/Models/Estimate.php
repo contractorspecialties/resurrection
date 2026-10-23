@@ -24,6 +24,7 @@ class Estimate extends Model
         'sent_at',
         'accepted_at',
         'job_date',
+        'job_start_time',
     ];
 
     protected function casts(): array

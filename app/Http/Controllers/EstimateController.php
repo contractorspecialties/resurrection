@@ -185,10 +185,12 @@ class EstimateController extends Controller
 
         $data = $request->validate([
             'job_date' => ['nullable', 'date'],
+            'job_start_time' => ['nullable', 'date_format:H:i'],
         ]);
 
         $estimate->update([
             'job_date' => $data['job_date'] ?: null,
+            'job_start_time' => !empty($data['job_date']) ? ($data['job_start_time'] ?? null) : null,
         ]);
 
         return back()->with(
@@ -271,6 +273,52 @@ class EstimateController extends Controller
         foreach ($items as $item) {
             $estimate->items()->create($item);
         }
+    }
+
+
+    public function cancel(Request $request, Estimate $estimate): RedirectResponse
+    {
+        $this->authorizeEstimate($request, $estimate);
+
+        DB::transaction(function () use ($request, $estimate) {
+            $locked = Estimate::query()
+                ->where('company_id', $request->user()->company_id)
+                ->lockForUpdate()
+                ->findOrFail($estimate->id);
+
+            abort_unless(
+                in_array($locked->status, [
+                    'draft',
+                    'sent',
+                    'revision_requested',
+                ], true),
+                409,
+                'This estimate or job cannot be canceled.'
+            );
+
+            abort_if(
+                $locked->payments()
+                    ->where('status', 'pending')
+                    ->exists(),
+                409,
+                'A payment is still pending. Resolve it before canceling.'
+            );
+
+            // Keep every acceptance, payment and financial amount.
+            // Cancellation is not a refund.
+            $locked->update([
+                'status' => 'canceled',
+                'job_date' => null,
+                'job_start_time' => null,
+            ]);
+        });
+
+        return redirect()
+            ->route('estimates.show', $estimate)
+            ->with(
+                'status',
+                'Estimate or job canceled. Existing payments were not refunded.'
+            );
     }
 
     private function authorizeEstimate(Request $request, Estimate $estimate): void

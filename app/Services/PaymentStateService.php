@@ -29,6 +29,13 @@ class PaymentStateService
             return;
         }
 
+        // Preserve a contractor's cancellation decision even if
+        // a delayed payment or refund event is reconciled.
+        // The Payment record itself remains authoritative.
+        if ($estimate->status === 'canceled') {
+            return;
+        }
+
         $paidAmount = $estimate->paidAmountCents();
         $depositPaid = $estimate->depositPaidCents();
 

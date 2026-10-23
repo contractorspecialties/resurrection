@@ -12,6 +12,27 @@
 <div class="field"><label>Bill amount</label><input id="amount" name="amount" type="number" min="0.01" step="0.01" value="{{ old('amount',$service->exists?number_format($service->amount_cents/100,2,'.',''):'') }}" required></div>
 <div class="field"><label>Frequency</label><select name="frequency">@foreach(['weekly'=>'Weekly','biweekly'=>'Every 2 weeks','monthly'=>'Monthly','quarterly'=>'Every 3 months','annually'=>'Yearly'] as $value=>$label)<option value="{{ $value }}" @selected(old('frequency',$service->frequency)===$value)>{{ $label }}</option>@endforeach</select></div>
 <div class="field"><label>Next bill date</label><input name="next_bill_on" type="date" value="{{ old('next_bill_on',$service->next_bill_on?->format('Y-m-d')) }}" required></div>
+<div class="field">
+    <label for="next_visit_on">Next service visit (optional)</label>
+    <input
+        id="next_visit_on"
+        name="next_visit_on"
+        type="date"
+        value="{{ old('next_visit_on', $service->next_visit_on?->format('Y-m-d')) }}"
+    >
+    <div class="help">
+        When the work is scheduled. This does not change the billing date.
+    </div>
+</div>
+<div class="field">
+    <label for="visit_start_time">Visit start time (optional)</label>
+    <input
+        id="visit_start_time"
+        name="visit_start_time"
+        type="time"
+        value="{{ old('visit_start_time', $service->visit_start_time ? substr($service->visit_start_time, 0, 5) : '') }}"
+    >
+</div>
 <label style="display:flex;gap:10px;align-items:center;margin-bottom:18px"><input style="width:auto" type="checkbox" name="auto_send_email" value="1" @checked(old('auto_send_email',$service->auto_send_email))><span>Automatically email the Quick Bill when generated</span></label>
 <label style="display:flex;gap:10px;align-items:center"><input style="width:auto" type="checkbox" name="is_active" value="1" @checked(old('is_active',$service->is_active??true))><span>Active</span></label>
 </div></div><div style="margin-top:20px"><button class="btn btn-primary" type="submit">{{ $service->exists?'Save Changes':'Create Recurring Service' }}</button></div></form>
