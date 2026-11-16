@@ -69,6 +69,25 @@
     </div>
 </form>
 
+<div class="card" style="margin-top:20px">
+    <div class="kicker">Next step</div>
+    <h2 style="margin:8px 0">Ready to price a job?</h2>
+    <p class="muted">
+        Your customer is saved. Create an estimate when
+        you're ready, or return to your dashboard.
+    </p>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a class="btn btn-primary"
+           href="{{ route('estimates.create') }}">
+            Next Step: Create Estimate &rarr;
+        </a>
+        <a class="btn btn-secondary"
+           href="{{ route('dashboard') }}">
+            Back to Dashboard
+        </a>
+    </div>
+</div>
+
 <div class="card" style="margin-top:20px;border:1px solid #d8b2ad">
     <div class="kicker">Remove from active customers</div>
     <h2 style="margin:8px 0">Delete if unused. Archive if history exists.</h2>
