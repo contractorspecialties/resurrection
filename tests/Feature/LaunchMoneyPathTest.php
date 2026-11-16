@@ -354,6 +354,65 @@ class LaunchMoneyPathTest extends TestCase
         $this->assertSame(25000, $quickBill->balanceDueCents());
     }
 
+    public function test_successful_acceptance_notifies_owner_once(): void
+    {
+        [$company, $user] = $this->companyAndUser();
+        $client = $this->client($company);
+
+        $estimate = $this->estimate(
+            company: $company,
+            client: $client,
+            status: 'sent',
+            totalCents: 10000,
+            depositCents: 2500,
+        );
+
+        \Illuminate\Support\Facades\Notification::fake();
+
+        $url = route('portal.accept', $estimate->portal_token);
+
+        $payload = [
+            'signature_name' => 'Test Customer',
+            'agree' => '1',
+        ];
+
+        $this->post($url, $payload)->assertRedirect(
+            route('portal.show', $estimate->portal_token)
+        );
+
+        $this->assertSame(
+            'deposit_due',
+            $estimate->fresh()->status
+        );
+
+        $this->assertSame(
+            1,
+            EstimateAcceptance::where(
+                'estimate_id',
+                $estimate->id
+            )->count()
+        );
+
+        \Illuminate\Support\Facades\Notification::assertSentTo(
+            $user,
+            \App\Notifications\EstimateAcceptedNotification::class
+        );
+
+        \Illuminate\Support\Facades\Notification::assertCount(1);
+
+        $this->post($url, $payload)->assertStatus(409);
+
+        $this->assertSame(
+            1,
+            EstimateAcceptance::where(
+                'estimate_id',
+                $estimate->id
+            )->count()
+        );
+
+        \Illuminate\Support\Facades\Notification::assertCount(1);
+    }
+
     public function test_estimate_with_pending_revision_cannot_be_accepted(): void
     {
         [$company, $user] = $this->companyAndUser();

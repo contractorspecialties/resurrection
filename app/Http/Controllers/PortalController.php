@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Estimate;
 use App\Models\EstimateAcceptance;
+use App\Notifications\EstimateAcceptedNotification;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -99,6 +101,28 @@ class PortalController extends Controller
                 'accepted_at' => now(),
             ]);
         });
+
+        // Acceptance is committed before notification dispatch.
+        // Email or queue failures must not reverse acceptance.
+        try {
+            $accepted = $estimate->fresh(['company.owner']);
+
+            $owner = $accepted?->company?->owner;
+
+            if ($owner && filled($owner->email)) {
+                $owner->notify(
+                    new EstimateAcceptedNotification($accepted->id)
+                );
+            }
+        } catch (\Throwable $e) {
+            Log::warning(
+                'Estimate acceptance notification could not be queued.',
+                [
+                    'estimate_id' => $estimate->id,
+                    'exception' => get_class($e),
+                ]
+            );
+        }
 
         return redirect()
             ->route('portal.show', $estimate->portal_token)
