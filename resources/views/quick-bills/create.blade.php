@@ -19,6 +19,7 @@
             <div class="field">
                 <label for="client_id">Customer</label>
                 <select id="client_id" name="client_id" required>
+                    <option value="" disabled @selected(!old('client_id'))>Choose a customer...</option>
                     @foreach($clients as $client)
                         <option value="{{ $client->id }}" @selected((string) old('client_id') === (string) $client->id)>
                             {{ $client->name }}

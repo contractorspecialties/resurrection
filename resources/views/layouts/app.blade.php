@@ -656,6 +656,7 @@
                 </nav>
 
                 <div class="header-actions">
+                    <a class="quick-trigger" href="{{ route('customers.create') }}">+ New Customer</a>
                     <div class="quick-menu">
                         <button class="quick-trigger" type="button" aria-expanded="false">+ New</button>
 
@@ -669,7 +670,7 @@
 
                     <form class="desktop-logout" method="POST" action="{{ route('logout') }}">
                         @csrf
-                        <button class="logout-btn cs-profile-logout" type="submit" aria-label="Log out" title="Log out"><svg class="cs-nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></svg></button>
+                        <button class="logout-btn" type="submit">Log Out</button>
                     </form>
 
                     <button class="mobile-toggle" type="button" aria-label="Open navigation" aria-expanded="false">
